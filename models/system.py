@@ -7,7 +7,17 @@ class System(object):
     as a function of internal coordinaes.
     """
 
-    def __init__(self):
+    def __init__(self, N, dim):
+        self.N = N
+        self.dim = dim
+        self.x = np.zeros((N, dim))
+
+        # Holders for the energy of the system
+        # Any method that updates the system should update these values
+        self.en = 0.0
+        self.eidx = np.zeros(N)
+
+    def _init_coords(self):
         pass
 
     def energy(self):
