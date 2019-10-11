@@ -7,19 +7,20 @@ class Box(object):
     A periodic simulation box.
     Implements methods for minimum image and position wrapping across the boundary.
     """
-    def __init__(self, lens):
-        if type(lens) not in [tuple, list, np.ndarray]:
-            lens = [lens]
 
-        self.dim = len(lens)
-        self.lens = np.array(lens).astype(float)
-        self.lens_half = self.lens / 2.0
+    def __init__(self, lengths):
+        if type(lengths) not in [tuple, list, np.ndarray]:
+            lengths = [lengths]
 
-        self.h = np.diag(self.lens)
+        self.dim = len(lengths)
+        self.lengths = np.array(lengths).astype(float)
+        self.lengths_half = self.lengths / 2.0
+
+        self.h = np.diag(self.lengths)
         self.h_inv = np.linalg.inv(self.h)
 
     def volume(self):
-        return np.prod(self.lens)
+        return np.prod(self.lengths)
 
     def wrap(self, x):
         assert self.dim == x.shape[-1], "Coordinate dimensions and Box dimension do not match."
@@ -33,8 +34,8 @@ class Box(object):
         f -= np.round(f)
         return np.dot(f, self.h)
 
-    def distance(self, x):
-        dx = self.min_image(x)
+    def distance(self, x1, x2):
+        dx = self.min_image(x2 - x1)
         if len(dx.shape) > 1:
             return np.linalg.norm(dx, axis = 1)
         else:
