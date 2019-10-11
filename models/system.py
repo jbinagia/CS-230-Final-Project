@@ -13,13 +13,18 @@ class System(object):
         self.x = np.zeros((N, dim))
 
         # Holders for the energy of the system
-        # Any method that updates the system should update these values
+        # Any method that updates the system position should update these values
         self.en = 0.0
         self.eidx = np.zeros(N)
 
     def _init_coords(self):
         pass
 
-    def energy(self):
+    def calc_energy(self):
         pass
 
+    def calc_energy_idx(self, idx):
+        pass
+
+    def displace(self, idx):
+        pass
