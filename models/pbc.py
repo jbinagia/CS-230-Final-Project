@@ -4,7 +4,7 @@ import numpy as np
 
 class Box(object):
     """
-    A periodic simulation box.
+    A periodic simulation box in 3 dimensions.
     Implements methods for minimum image and position wrapping across the boundary.
     """
 
@@ -23,13 +23,11 @@ class Box(object):
         return np.prod(self.lengths)
 
     def wrap(self, x):
-        assert self.dim == x.shape[-1], "Coordinate dimensions and Box dimension do not match."
         f = np.dot(x, self.h_inv)
         f -= np.floor(f)
         return np.dot(f, self.h)
 
     def min_image(self, x):
-        assert self.dim == x.shape[-1], "Coordinate dimensions and Box dimension do not match."
         f = np.dot(x, self.h_inv)
         f -= np.round(f)
         return np.dot(f, self.h)
