@@ -12,8 +12,6 @@ class System(object):
     def __init__(self, shape, params = None):
         self.shape = shape
         self.n = np.prod(shape) # Vector dimension of flattened coordinates
-        self.x = np.zeros(shape)
-        self.energy = 0.0
 
         # Set parameters
         if params is None:
@@ -27,18 +25,14 @@ class System(object):
         self.x = vec.reshape(self.shape)
         return self.x
 
-    def _init_coords(self):
+    def init_coords(self):
         pass
 
-    def calc_energy(self):
+    def calc_energy(self, x):
         pass
 
-    def calc_energy_idx(self, idx):
-        """
-        Calculates the energy at coordinate `idx` in the system,
-        which may correspond to a single particle or lattice site.
-        """
+    def calc_energy_idx(self, x, idx):
         pass
 
-    def displace(self, idx = None):
+    def displace(self, x, idx = None):
         pass
