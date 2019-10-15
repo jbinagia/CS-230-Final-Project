@@ -64,9 +64,9 @@ class NematicLattice(System):
     def random_idx(self, x):
         return np.random.randint(np.prod(x.shape[:-1]))
 
-    def displace(self, x, **kwargs):
-        theta_max = kwargs.get("theta_max", np.pi/4)
-        M = rotation_matrix(np.random.rand(3), np.random.rand()*theta_max)
+    def step(self, x, **kwargs):
+        theta = kwargs.get("theta", np.pi/4)
+        M = rotation_matrix(np.random.rand(3), np.random.rand()*theta)
         return np.dot(M, x) # Make this work for other dimensions of x? Cannot pass whole array right now.
 
     def oprm(self, x):

@@ -57,13 +57,14 @@ class IsingModel(System):
 
         return en
 
-    def random_idx(self, x):
-        return np.random.randint(x.size)
-
-    def displace(self, x, idx, **kwargs):
+    def step(self, x, **kwargs):
         N = x.shape[0]
-        i, j = np.unravel_index(idx, (N, N))
-        return -1*x[i,j]
+        i, j = np.random.randint(N, size = 2)
+
+        new = np.copy(x)
+        new[i,j] = -1 * x[i,j]
+
+        return new, np.ravel_multi_index((i, j), (N, N))
 
     def oprm(self, x):
         """Order parameter for IsingModel is the average magnetization."""

@@ -87,9 +87,9 @@ class GaussianChain(System):
     def random_idx(self, x):
         return np.random.randint(x.shape[0])
 
-    def displace(self, x, **kwargs):
-        step = kwargs.get("step", 0.5 * self.params["sig"])
-        return self.box.wrap(x + np.random.randn(*x.shape) * step)
+    def step(self, x, **kwargs):
+        delta = kwargs.get("delta", 0.5 * self.params["sig"])
+        return self.box.wrap(x + np.random.randn(*x.shape) * delta)
 
     def _unwrap(self, x):
         """Unwraps a chain across periodic boundaries."""

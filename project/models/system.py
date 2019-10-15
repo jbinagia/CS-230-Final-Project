@@ -34,7 +34,7 @@ class System(object):
     def random_idx(self, *args, **kwargs):
         pass
 
-    def displace(self, *args, **kwargs):
+    def step(self, *args, **kwargs):
         pass
 
     def oprm(self, *args, **kwargs):
