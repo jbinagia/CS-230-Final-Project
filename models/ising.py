@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
 
+from utils import lj_potential
 from .system import System
 from .pbc import Box
-from .potentials import lj_potential, harmonic_potential
 
 #################################################################################
 

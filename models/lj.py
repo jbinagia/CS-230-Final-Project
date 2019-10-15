@@ -25,7 +25,7 @@ class LJFluid(System):
         # Create an appropriate simulation box
         self.box = Box([self.params["L"]] * self.params["dim"])
 
-    def init_coords(self, N, init_try = 100, **kwargs):
+    def init_coords(self, N, init_try = 500, **kwargs):
         # Check coordinate size
         if N * self._particle_volume() > 0.9 * self.box.volume():
             raise ValueError("Particle volume exceeds simulation box size -- try increasing your box size.")

@@ -65,7 +65,7 @@ class MetropolisGauss(object):
         self.etraj_ = []
 
         # initial configuration
-        self.x = np.tile(x0, (self.nwalkers, 1))
+        self.x = np.tile(x0,  (self.nwalkers, 1))
         self.x = self.mapper.map(self.x)
         self.E = self.model.energy(self.x)
 

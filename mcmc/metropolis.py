@@ -4,7 +4,7 @@ import numpy as np
 
 #################################################################################
 
-class MetropolisMCMC(object):
+class MetropolisSampler(object):
 
     def __init__(self, model, x0, temperature = 1.0, burnin = 0, stride = 1, nwalkers = 1, 
         mapper = None, **kwargs):
@@ -71,9 +71,9 @@ class MetropolisMCMC(object):
         self.etraj_ = []
 
         # Initial configuration
-        self.x = np.tile(x0, (self.nwalkers, 1))
+        self.x = np.tile(x0, tuple([self.nwalkers]) + tuple([1]) * len(x0.shape) )
         self.x = self.mapper.map(self.x)
-        self.E = self.model.energy(self.x)
+        self.E = np.array([self.model.energy(xi) for xi in self.x])
 
         # Save first frame if no burnin
         if self.burnin == 0:
@@ -112,14 +112,14 @@ class MetropolisMCMC(object):
                 self.etraj_.append(self.E)
 
 
-class ReplicaExchangeMetropolisMCMC(object):
+class ReplicaMetropolisSampler(object):
 
     def __init__(self, model, x0, temperatures, noise=0.1,
                  burnin=0, stride=1, mapper=None):
         if temperatures.size % 2 == 0:
             raise ValueError('Please use an odd number of temperatures.')
         self.temperatures = temperatures
-        self.sampler = MetropolisGauss(model, x0, temperature=temperatures, noise=noise,
+        self.sampler = MetropolisSampler(model, x0, temperature=temperatures, noise=noise,
                                        burnin=burnin, stride=stride, nwalkers=temperatures.size, mapper=mapper)
         self.toggle=0
 

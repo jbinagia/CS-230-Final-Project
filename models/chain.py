@@ -27,7 +27,7 @@ class GaussianChain(System):
         # Create an appropriate simulation box
         self.box = Box([self.params["L"]] * 3) # Fixed at 3D
 
-    def init_coords(self, N, init_try = 100, **kwargs):
+    def init_coords(self, N, init_try = 500, **kwargs):
         # Check coordinate size
         if (N * (self.params["sig"]**3)) > 0.9 * self.box.volume():
             raise ValueError("Particle volume exceeds simulation box size -- try increasing your box size.")
