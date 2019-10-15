@@ -1,4 +1,3 @@
-import itertools
 import numpy as np
 import tensorflow as tf
 
@@ -29,30 +28,39 @@ class IsingModel(System):
         shape = [N] * 2
         return 2 * np.random.randint(0, 2, size = shape) - 1
 
-    def calc_energy(self, x):
+    def _neighbor_sum(self, x, i, j):
+        N = x.shape[0]
+        return x[(i+1)%N, j] + x[(i-1)%N, j] \
+             + x[i, (j+1)%N] + x[i, (j-1)%N]
+
+    def energy(self, x):
         N = x.shape[0]
 
         en = 0.0    
-        for (i, j) in itertools.product(range(N), range(N)):
-            sij = x[i,j]
-            nb = x[(i+1)%N, j] + x[i, (j+1)%N] + x[(i-1)%N, j] + x[i, (j-1)%N]
-            en += -0.25*self.params["J"]*nb*sij
-            en += self.params["h"]*sij # Linear coupling to each lattice index
+        for i in range(N):
+            for j in range(N):
+                s = x[i,j]
+                nb = self._neighbor_sum(x, i, j)
+                en += -0.25*self.params["J"]*nb*s
+                en += self.params["h"]*s # Linear coupling to each lattice index
 
         return en
 
-    def calc_energy_idx(self, x, idx):
+    def energy_idx(self, x, idx):
         N = x.shape[0]
         i, j = np.unravel_index(idx, (N, N))
 
-        sij = x[i,j]
-        nb = x[(i+1)%N, j] + x[i, (j+1)%N] + x[(i-1)%N, j] + x[i, (j-1)%N]
-        eidx = -0.5*self.params["J"]*nb*sij 
-        eidx += self.params["h"]*sij
+        s = x[i,j]
+        nb = self._neighbor_sum(x, i, j)
+        en = -0.5*self.params["J"]*nb*s 
+        en += self.params["h"]*s
 
-        return eidx
+        return en
 
-    def displace(self, x, idx):
+    def random_idx(self, x):
+        return np.random.randint(x.size)
+
+    def displace(self, x, idx, **kwargs):
         N = x.shape[0]
         i, j = np.unravel_index(idx, (N, N))
         return -1*x[i,j]
@@ -63,10 +71,10 @@ class IsingModel(System):
 
     #################################################################################
 
-    def draw_config(self, x):
+    def draw_config(self, x, figsize = (8, 8)):
         import matplotlib.pyplot as plt
 
-        (fig, ax) = plt.subplots(1, figsize = (5, 5))
+        (fig, ax) = plt.subplots(1, figsize = figsize)
 
         N = x.shape[0]
         X, Y = np.meshgrid(range(N+1), range(N+1)) 

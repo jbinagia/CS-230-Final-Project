@@ -20,17 +20,25 @@ class System(object):
             if k in self.params:
                 self.params[k] = v
 
-    def init_coords(self):
+    # Each mode will implement, at least, the below
+    
+    def init_coords(self, *args, **kwargs):
         pass
 
-    def calc_energy(self, x):
+    def energy(self, *args, **kwargs):
         pass
 
-    def calc_energy_idx(self, x, idx):
+    def energy_idx(self, *args, **kwargs):
         pass
 
-    def displace(self, x, idx):
+    def random_idx(self, *args, **kwargs):
         pass
 
-    def draw_config(self, x):
+    def displace(self, *args, **kwargs):
+        pass
+
+    def oprm(self, *args, **kwargs):
+        pass
+
+    def draw_config(self, *args, **kwargs):
         pass

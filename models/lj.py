@@ -1,8 +1,8 @@
 import numpy as np
 
+from utils import lj_potential
 from .system import System
 from .pbc import Box
-from .potentials import lj_potential
 
 #################################################################################
 
@@ -52,7 +52,7 @@ class LJFluid(System):
 
         return x
 
-    def calc_energy(self, x):
+    def energy(self, x):
         # Raw calculation with O(N^2) scaling, slow
         en = 0.0
         for i in range(len(x)):
@@ -61,7 +61,7 @@ class LJFluid(System):
                 en += lj_potential(rij, self.params["sig"], self.params["eps"])
         return en
 
-    def calc_energy_idx(self, x, idx):
+    def energy_idx(self, x, idx):
         # For incremental MCMC updates, single particle, scales O(N)
         en = 0.0
         for i in range(len(x)):
@@ -72,7 +72,10 @@ class LJFluid(System):
                 en += lj_potential(rij, self.params["sig"], self.params["eps"])
         return en
 
-    def displace(self, x, idx = None, **kwargs):
+    def random_idx(self, x):
+        return np.random.randint(x.shape[0])
+
+    def displace(self, x, **kwargs):
         step = kwargs.get("step", 0.5 * self.params["sig"])
         return self.box.wrap(x + np.random.randn(*x.shape) * step)
 
@@ -86,18 +89,18 @@ class LJFluid(System):
 
     #################################################################################
 
-    def draw_config(self, x, alpha = 0.75):
+    def draw_config(self, x, alpha = 0.75, figsize = (8, 8)):
         if x.shape[-1] == 1:
-            self._draw_config_1d(x, alpha)
+            self._draw_config_1d(x, alpha, figsize)
         elif x.shape[-1] == 2:
-            self._draw_config_2d(x, alpha)
+            self._draw_config_2d(x, alpha, figsize)
         elif x.shape[-1] == 3:
-            self._draw_config_3d(x, alpha)
+            self._draw_config_3d(x, alpha, figsize)
 
-    def _draw_config_1d(self, x, alpha):
+    def _draw_config_1d(self, x, alpha, figsize = (8, 0.25)):
         import matplotlib.pyplot as plt
 
-        fig = plt.figure(figsize = (5, 0.25))
+        fig = plt.figure(figsize = (figsize[0], 0.25))
         ax = plt.gca()
 
         sig = self.params["sig"]
@@ -109,11 +112,11 @@ class LJFluid(System):
         ax.scatter(x, np.zeros_like(x), c = "gray", edgecolors = 'black', alpha = alpha)
 
 
-    def _draw_config_2d(self, x, alpha):
+    def _draw_config_2d(self, x, alpha, figsize = (8, 8)):
         import matplotlib.pyplot as plt
         from matplotlib.patches import Circle
 
-        fig = plt.figure(figsize = (5, 5))
+        fig = plt.figure(figsize = figsize)
         ax = plt.gca()
 
         sig = self.params["sig"]
@@ -126,11 +129,11 @@ class LJFluid(System):
             ax.add_patch(Circle(c, radius = 0.5 * self.params["sig"],
                 linewidth=2, edgecolor='black', facecolor='grey', alpha=alpha))
 
-    def _draw_config_3d(self, x, alpha):
+    def _draw_config_3d(self, x, alpha, figsize = (8, 8)):
         import matplotlib.pyplot as plt
         from mpl_toolkits.mplot3d import Axes3D
         
-        fig = plt.figure(figsize = (5, 5))
+        fig = plt.figure(figsize = figsize)
         ax = Axes3D(fig)
 
         sig = self.params["sig"]

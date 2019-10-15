@@ -1,9 +1,9 @@
 import numpy as np
 import tensorflow as tf
 
+from utils import lj_potential, harmonic_potential
 from .system import System
 from .pbc import Box
-from .potentials import lj_potential, harmonic_potential
 
 #################################################################################
 
@@ -56,7 +56,7 @@ class GaussianChain(System):
 
         return x
 
-    def calc_energy(self, x):
+    def energy(self, x):
         # Raw calculation with O(N^2) scaling, slow
         en_nb = 0.0
         for i in range(len(x)):
@@ -71,7 +71,7 @@ class GaussianChain(System):
 
         return en_nb + en_b
 
-    def calc_energy_idx(self, x, idx):
+    def energy_idx(self, x, idx):
         # For incremental MCMC updates, single particle, scales O(N)
         en = 0.0
         for i in range(len(x)):
@@ -84,18 +84,21 @@ class GaussianChain(System):
                     en += harmonic_potential(rij, self.params["r0"], self.params["k"])
         return en
 
+    def random_idx(self, x):
+        return np.random.randint(x.shape[0])
+
     def displace(self, x, **kwargs):
         step = kwargs.get("step", 0.5 * self.params["sig"])
         return self.box.wrap(x + np.random.randn(*x.shape) * step)
 
-    def unwrap(self, x):
+    def _unwrap(self, x):
         """Unwraps a chain across periodic boundaries."""
         delta = self.box.min_image(x[1:] - x[:-1])
         return np.cumsum(np.vstack((x[0], delta)), axis = 0)
 
     def oprm(self, x):
         """Order parameter for a GaussianChain is radius of gyration."""
-        xu = self.unwrap(x)
+        xu = self._unwrap(x)
         com = np.mean(xu, axis = 0)
         xc = xu - com
 
@@ -106,11 +109,11 @@ class GaussianChain(System):
 
     #################################################################################
 
-    def draw_config(self, x, alpha = 0.75):
+    def draw_config(self, x, alpha = 0.75, figsize = (8, 8)):
         import matplotlib.pyplot as plt
         from mpl_toolkits.mplot3d import Axes3D
         
-        fig = plt.figure(figsize = (5, 5))
+        fig = plt.figure(figsize = figsize)
         ax = Axes3D(fig)
 
         sig = self.params["sig"]
