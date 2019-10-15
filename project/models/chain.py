@@ -1,9 +1,10 @@
 import numpy as np
 import tensorflow as tf
 
-from utils import lj_potential, harmonic_potential
 from .system import System
 from .pbc import Box
+
+from ..utils import lj_potential, harmonic_potential
 
 #################################################################################
 
@@ -69,7 +70,7 @@ class GaussianChain(System):
             rij = self.box.distance(x[i], x[i-1])
             en_b += harmonic_potential(rij, self.params["r0"], self.params["k"])
 
-        return en_nb + en_b
+        return (en_nb + en_b)
 
     def energy_idx(self, x, idx):
         # For incremental MCMC updates, single particle, scales O(N)
@@ -82,19 +83,17 @@ class GaussianChain(System):
                 en += lj_potential(rij, self.params["sig"], self.params["eps"])
                 if (i == idx-1) or (i == idx+1):
                     en += harmonic_potential(rij, self.params["r0"], self.params["k"])
-        return en
 
-    def random_idx(self, x):
-        return np.random.randint(x.shape[0])
+        return en
 
     def step(self, x, **kwargs):
         delta = kwargs.get("delta", 0.5 * self.params["sig"])
-        return self.box.wrap(x + np.random.randn(*x.shape) * delta)
 
-    def _unwrap(self, x):
-        """Unwraps a chain across periodic boundaries."""
-        delta = self.box.min_image(x[1:] - x[:-1])
-        return np.cumsum(np.vstack((x[0], delta)), axis = 0)
+        new = np.copy(x)
+        idx = np.random.randint(x.shape[0])
+        new[idx, :] = self.box.wrap(x[idx] + np.random.randn(x.shape[-1]) * delta)
+
+        return idx, new
 
     def oprm(self, x):
         """Order parameter for a GaussianChain is radius of gyration."""
@@ -107,9 +106,17 @@ class GaussianChain(System):
             ))
         return rg2
 
+    def num_sites(self, x):
+        return x.shape[0]
+
+    def _unwrap(self, x):
+        """Unwraps a chain across periodic boundaries."""
+        delta = self.box.min_image(x[1:] - x[:-1])
+        return np.cumsum(np.vstack((x[0], delta)), axis = 0)
+
     #################################################################################
 
-    def draw_config(self, x, alpha = 0.75, figsize = (8, 8)):
+    def draw_config(self, x, alpha = 0.75, figsize = (6, 6)):
         import matplotlib.pyplot as plt
         from mpl_toolkits.mplot3d import Axes3D
         

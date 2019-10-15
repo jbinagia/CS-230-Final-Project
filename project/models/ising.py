@@ -1,7 +1,6 @@
 import numpy as np
 import tensorflow as tf
 
-from utils import lj_potential
 from .system import System
 from .pbc import Box
 
@@ -28,11 +27,6 @@ class IsingModel(System):
         shape = [N] * 2
         return 2 * np.random.randint(0, 2, size = shape) - 1
 
-    def _neighbor_sum(self, x, i, j):
-        N = x.shape[0]
-        return x[(i+1)%N, j] + x[(i-1)%N, j] \
-             + x[i, (j+1)%N] + x[i, (j-1)%N]
-
     def energy(self, x):
         N = x.shape[0]
 
@@ -42,7 +36,7 @@ class IsingModel(System):
                 s = x[i,j]
                 nb = self._neighbor_sum(x, i, j)
                 en += -0.25*self.params["J"]*nb*s
-                en += self.params["h"]*s # Linear coupling to each lattice index
+                en += -self.params["h"]*s # Linear coupling to each lattice index
 
         return en
 
@@ -53,26 +47,36 @@ class IsingModel(System):
         s = x[i,j]
         nb = self._neighbor_sum(x, i, j)
         en = -0.5*self.params["J"]*nb*s 
-        en += self.params["h"]*s
+        en += -self.params["h"]*s
 
         return en
 
     def step(self, x, **kwargs):
         N = x.shape[0]
         i, j = np.random.randint(N, size = 2)
+        idx = np.ravel_multi_index((i, j), (N, N))
 
         new = np.copy(x)
         new[i,j] = -1 * x[i,j]
 
-        return new, np.ravel_multi_index((i, j), (N, N))
+        return idx, new
 
     def oprm(self, x):
         """Order parameter for IsingModel is the average magnetization."""
         return np.mean(x)
 
+    def num_sites(self, x):
+        N = x.shape[0]
+        return N**2
+
+    def _neighbor_sum(self, x, i, j):
+        N = x.shape[0]
+        return x[(i+1)%N, j] + x[(i-1)%N, j] \
+             + x[i, (j+1)%N] + x[i, (j-1)%N]
+
     #################################################################################
 
-    def draw_config(self, x, figsize = (8, 8)):
+    def draw_config(self, x, figsize = (6, 6)):
         import matplotlib.pyplot as plt
 
         (fig, ax) = plt.subplots(1, figsize = figsize)

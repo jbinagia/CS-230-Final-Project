@@ -1,8 +1,8 @@
 import numpy as np
 import tensorflow as tf
 
-from utils import rotation_matrix
 from .system import System
+from ..utils import rotation_matrix
 
 #################################################################################
 
@@ -32,12 +32,6 @@ class NematicLattice(System):
         # Return normalized vectors of length 1
         return (x.reshape(np.prod(x.shape[:-1]), -1) / norms.reshape(norms.size, 1)).reshape(x.shape)
 
-    def _neighbor_sum(self, x, i, j, k):
-        N = x.shape[0]
-        return x[(i+1)%N, j, k] + x[(i-1)%N, j, k] \
-             + x[i, (j+1)%N, k] + x[i, (j-1)%N, k] \
-             + x[i, j, (k+1)%N] + x[i, j, (k-1)%N]
-
     def energy(self, x):
         N = x.shape[0]
         en = 0.0    
@@ -47,7 +41,8 @@ class NematicLattice(System):
                     s = x[i,j,k]
                     nb = self._neighbor_sum(x, i, j, k)
                     en += -0.25*self.params["J"]*np.dot(nb, s)
-                    en += self.params["h"]*np.dot(self.field, s)
+                    en += -self.params["h"]*np.dot(self.field, s)
+
         return en
 
     def energy_idx(self, x, idx):
@@ -57,30 +52,51 @@ class NematicLattice(System):
         s = x[i,j,k]
         nb = self._neighbor_sum(x, i, j, k)
         en = -0.5*self.params["J"]*np.dot(nb, s)
-        en += self.params["h"]*np.dot(self.field, s)
+        en += -self.params["h"]*np.dot(self.field, s)
 
         return en
 
-    def random_idx(self, x):
-        return np.random.randint(np.prod(x.shape[:-1]))
-
     def step(self, x, **kwargs):
-        theta = kwargs.get("theta", np.pi/4)
+        theta = kwargs.get("theta", np.pi/2)
+
+        N = x.shape[0]
+        i, j, k = np.random.randint(N, size = 3)
+        idx = np.ravel_multi_index((i, j, k), (N, N, N))
+
         M = rotation_matrix(np.random.rand(3), np.random.rand()*theta)
-        return np.dot(M, x) # Make this work for other dimensions of x? Cannot pass whole array right now.
+        new = np.copy(x)
+        new[i, j, k, :] = np.dot(M, x[i, j, k])
+
+        return idx, new
 
     def oprm(self, x):
-        """Order parameter for a NematicLattice is average z-direction orientation."""
-        return np.mean(x[:,:,:,2])
+        """Order parameter for a NematicLattice is the nematic parameter, S = 3*<sz>/2 - 1/2"""
+        # np.abs so it measures magnitude of alignment w/ field
+        sig_z = np.mean(x[:,:,:,2])
+        S = 3 * sig_z / 2 - 0.5 # Nematic order parameter
+        return S
+
+    def num_sites(self, x):
+        N = x.shape[0]
+        return N**3
+
+    def _neighbor_sum(self, x, i, j, k):
+        N = x.shape[0]
+        return x[(i+1)%N, j, k] + x[(i-1)%N, j, k] \
+             + x[i, (j+1)%N, k] + x[i, (j-1)%N, k] \
+             + x[i, j, (k+1)%N] + x[i, j, (k-1)%N]
 
     #################################################################################
 
-    def draw_config(self, x, figsize = (8, 8)):
+    def draw_config(self, x, alpha = 0.75, figsize = (6, 6)):
         import matplotlib.pyplot as plt
         from mpl_toolkits.mplot3d import Axes3D 
 
         fig = plt.figure(figsize = figsize)
         ax = fig.gca(projection = '3d')
+        ax.set_xlabel("z")
+        ax.set_ylabel("y")
+        ax.set_zlabel("x")
 
         N = len(x)
         gx, gy, gz = np.meshgrid(np.arange(N), np.arange(N), np.arange(N))
@@ -96,4 +112,7 @@ class NematicLattice(System):
         # Colormap
         c = plt.cm.hsv(c)
 
-        ax.quiver(gx, gy, gz, u, v, w, colors = c, length = 0.5)
+        ax.quiver(gz, gy, gx, u, w, v, 
+            colors = c, length = 0.5, 
+            alpha = alpha, pivot = 'middle'
+        )

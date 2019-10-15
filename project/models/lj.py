@@ -1,8 +1,9 @@
 import numpy as np
 
-from utils import lj_potential
 from .system import System
 from .pbc import Box
+
+from ..utils import lj_potential
 
 #################################################################################
 
@@ -59,6 +60,7 @@ class LJFluid(System):
             for j in range(i+1, len(x)):
                 rij = self.box.distance(x[i], x[j])
                 en += lj_potential(rij, self.params["sig"], self.params["eps"])
+
         return en
 
     def energy_idx(self, x, idx):
@@ -70,26 +72,32 @@ class LJFluid(System):
             else:
                 rij = self.box.distance(x[idx], x[i])
                 en += lj_potential(rij, self.params["sig"], self.params["eps"])
-        return en
 
-    def random_idx(self, x):
-        return np.random.randint(x.shape[0])
+        return en
 
     def step(self, x, **kwargs):
         delta = kwargs.get("delta", 0.5 * self.params["sig"])
-        return self.box.wrap(x + np.random.randn(*x.shape) * delta)
 
-    def _particle_volume(self):
-        return self.params["sig"]**self.params["dim"]
+        new = np.copy(x)
+        idx = np.random.randint(x.shape[0])
+        new[idx, :] = self.box.wrap(x[idx] + np.random.randn(x.shape[-1]) * delta)
+
+        return idx, new
 
     def oprm(self, x):
         """Order parameter for a LJFluid is particle volume fraction."""
         N = len(x)
         return N * self._particle_volume() / self.box.volume()
 
+    def num_sites(self, x):
+        return x.shape[0]
+
+    def _particle_volume(self):
+        return self.params["sig"]**self.params["dim"]
+
     #################################################################################
 
-    def draw_config(self, x, alpha = 0.75, figsize = (8, 8)):
+    def draw_config(self, x, alpha = 0.75, figsize = (6, 6)):
         if x.shape[-1] == 1:
             self._draw_config_1d(x, alpha, figsize)
         elif x.shape[-1] == 2:
@@ -112,7 +120,7 @@ class LJFluid(System):
         ax.scatter(x, np.zeros_like(x), c = "gray", edgecolors = 'black', alpha = alpha)
 
 
-    def _draw_config_2d(self, x, alpha, figsize = (8, 8)):
+    def _draw_config_2d(self, x, alpha, figsize = (6, 6)):
         import matplotlib.pyplot as plt
         from matplotlib.patches import Circle
 
@@ -129,7 +137,7 @@ class LJFluid(System):
             ax.add_patch(Circle(c, radius = 0.5 * self.params["sig"],
                 linewidth=2, edgecolor='black', facecolor='grey', alpha=alpha))
 
-    def _draw_config_3d(self, x, alpha, figsize = (8, 8)):
+    def _draw_config_3d(self, x, alpha, figsize = (6, 6)):
         import matplotlib.pyplot as plt
         from mpl_toolkits.mplot3d import Axes3D
         

@@ -1,5 +1,3 @@
-__author__ = 'noe'
-
 import numpy as np
 
 #################################################################################
@@ -49,24 +47,31 @@ class MetropolisSampler(object):
 
         self.reset(x0)
 
+        self.dog = []
+
     def _proposal_step(self):
         # Proposal step
-        idx = self.model.random_idx(self.x)
-        self.x_prop = self.model.displace(self.x, idx)
-        self.x_prop = self.mapper.map(self.x_prop)
 
+        props = [self.model.step(xi, **self.kwargs) for xi in self.x]
+        self.idx_prop = np.array([p[0] for p in props])
+        self.x_prop = np.array([p[1] for p in props])
         
-        self.E_prop = self.model.energy(self.x_prop)
+        self.E_idx = np.array([self.model.energy_idx(xi, i) for (xi, i) in zip(self.x, self.idx_prop)])
+        self.E_idx_prop = np.array([self.model.energy_idx(xi, i) for (xi, i) in zip(self.x_prop, self.idx_prop)])
 
     def _acceptance_step(self):
         # Acceptance step
-        acc = -np.log(np.random.rand()) > (self.E_prop - self.E) / self.temperature
-        self.x = np.where(acc[:, None], self.x_prop, self.x)
-        self.E = np.where(acc, self.E_prop, self.E)
+        dE = self.E_idx_prop - self.E_idx
+        acc = -np.log(np.random.rand()) > dE / self.temperature
+
+        for i in range(len(acc)):
+            self.x[i] = self.x_prop[i] if acc[i] else self.x[i]
+        self.E = self.E + np.where(acc, dE, 0.0)
 
     def reset(self, x0):
         # Counters
         self.step = 0
+        self.steps_ = []
         self.traj_ = []
         self.etraj_ = []
 
@@ -77,8 +82,13 @@ class MetropolisSampler(object):
 
         # Save first frame if no burnin
         if self.burnin == 0:
+            self.steps_.append(0)
             self.traj_.append(self.x)
             self.etraj_.append(self.E)
+
+    @property
+    def steps(self):
+        return self.steps_
 
     @property
     def trajs(self):
@@ -100,7 +110,7 @@ class MetropolisSampler(object):
     def etraj(self):
         return self.etrajs[0]
 
-    def run(self, nsteps=1, verbose=0):
+    def run(self, nsteps = 1, verbose = 0):
         for i in range(nsteps):
             self._proposal_step()
             self._acceptance_step()
@@ -108,19 +118,20 @@ class MetropolisSampler(object):
             if verbose > 0 and i % verbose == 0:
                 print('Step', i, '/', nsteps)
             if self.step > self.burnin and self.step % self.stride == 0:
-                self.traj_.append(self.x)
-                self.etraj_.append(self.E)
+                self.steps_.append(i)
+                self.traj_.append(np.copy(self.x))
+                self.etraj_.append(self.E / self.model.num_sites(self.x[0])) # Per-site energy trajectory
 
 
 class ReplicaMetropolisSampler(object):
 
-    def __init__(self, model, x0, temperatures, noise=0.1,
-                 burnin=0, stride=1, mapper=None):
+    def __init__(self, model, x0, temperatures, burnin = 0, stride = 1, mapper = None, **kwargs):
         if temperatures.size % 2 == 0:
             raise ValueError('Please use an odd number of temperatures.')
         self.temperatures = temperatures
         self.sampler = MetropolisSampler(model, x0, temperature=temperatures, noise=noise,
-                                       burnin=burnin, stride=stride, nwalkers=temperatures.size, mapper=mapper)
+                                       burnin=burnin, stride=stride, 
+                                       nwalkers=temperatures.size, mapper=mapper, **kwargs)
         self.toggle=0
 
     @property
@@ -131,7 +142,7 @@ class ReplicaMetropolisSampler(object):
     def etrajs(self):
         return self.sampler.etrajs
 
-    def run(self, nepochs=1, nsteps_per_epoch=1, verbose=0):
+    def run(self, nepochs = 1, nsteps_per_epoch = 1, verbose = 0):
         for i in range(nepochs):
             self.sampler.run(nsteps=nsteps_per_epoch)
             # exchange
