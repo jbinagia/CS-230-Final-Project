@@ -1,6 +1,8 @@
-# Potentials used for interatomic interactions
+import numpy as np
 
-# Distance potentials
+#################################################################################
+# Atomic potentials
+#################################################################################
 
 def lj_potential(r, sig, eps):
     r6 = (sig / r) ** 6
@@ -10,8 +12,4 @@ def lj_potential(r, sig, eps):
 def harmonic_potential(r, r0, k):
     return 0.5 * k * (r - r0)**2
 
-# Angle potentials?
-
-# Dihedral potentials?
-
-# Use OpenMM wrapper for more complex potentials?
+#################################################################################

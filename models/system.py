@@ -9,21 +9,16 @@ class System(object):
 
     params_default = {}
 
-    def __init__(self, shape, params = None):
-        self.shape = shape
-        self.n = np.prod(shape) # Vector dimension of flattened coordinates
-
+    def __init__(self, params = None, **kwargs):
         # Set parameters
         if params is None:
             params = self.__class__.params_default
-        self.params = params
+        self.params = params.copy()
 
-    def x_to_vec(self):
-        return self.x.flatten()
-
-    def vec_to_x(self, vec):
-        self.x = vec.reshape(self.shape)
-        return self.x
+        # Force update from kwargs
+        for k, v in kwargs.items():
+            if k in self.params:
+                self.params[k] = v
 
     def init_coords(self):
         pass
@@ -34,5 +29,8 @@ class System(object):
     def calc_energy_idx(self, x, idx):
         pass
 
-    def displace(self, x, idx = None):
+    def displace(self, x, idx):
+        pass
+
+    def draw_config(self, x):
         pass

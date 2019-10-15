@@ -41,3 +41,6 @@ class Box(object):
 
     def random_position(self):
         return np.dot(np.random.rand(self.dim), self.h)
+
+    def center(self):
+        return self.lengths_half
