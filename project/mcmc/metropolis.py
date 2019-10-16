@@ -14,8 +14,6 @@ class MetropolisSampler(object):
             Energy model object, must provide the function energy(x) and energy_idx(x)
         x0 : [array]
             Initial configuration
-        noise : float
-            Noise intensity, standard deviation of Gaussian proposal step
         temperatures : float or array
             Temperature. By default (1.0) the energy is interpreted in reduced units.
             When given an array, its length must correspond to nwalkers, then the walkers
@@ -84,11 +82,11 @@ class MetropolisSampler(object):
         if self.burnin == 0:
             self.steps_.append(0)
             self.traj_.append(self.x)
-            self.etraj_.append(self.E)
+            self.etraj_.append(self.E / self.model.num_sites(self.x[0]))
 
     @property
     def steps(self):
-        return self.steps_
+        return np.array(self.steps_)
 
     @property
     def trajs(self):
@@ -117,8 +115,8 @@ class MetropolisSampler(object):
             self.step += 1
             if verbose > 0 and i % verbose == 0:
                 print('Step', i, '/', nsteps)
-            if self.step > self.burnin and self.step % self.stride == 0:
-                self.steps_.append(i)
+            if self.step > 0 and self.step > self.burnin and self.step % self.stride == 0:
+                self.steps_.append(self.step)
                 self.traj_.append(np.copy(self.x))
                 self.etraj_.append(self.E / self.model.num_sites(self.x[0])) # Per-site energy trajectory
 
@@ -128,11 +126,21 @@ class ReplicaMetropolisSampler(object):
     def __init__(self, model, x0, temperatures, burnin = 0, stride = 1, mapper = None, **kwargs):
         if temperatures.size % 2 == 0:
             raise ValueError('Please use an odd number of temperatures.')
+
+        self.toggle = 0
         self.temperatures = temperatures
-        self.sampler = MetropolisSampler(model, x0, temperature=temperatures, noise=noise,
-                                       burnin=burnin, stride=stride, 
-                                       nwalkers=temperatures.size, mapper=mapper, **kwargs)
-        self.toggle=0
+        self.sampler = MetropolisSampler(model, x0, temperature = temperatures,
+            burnin = burnin, stride = stride, nwalkers = temperatures.size, mapper = mapper, **kwargs)
+
+    @property
+    def steps(self):
+        splits = np.split(self.sampler.steps, 
+            1 + np.argwhere(self.sampler.steps[1:] < self.sampler.steps[:-1]).flatten())
+
+        steps = splits[0]
+        for i in range(1, len(splits)): 
+            steps = np.append(steps, splits[i-1][-1] + splits[i])
+        return steps
 
     @property
     def trajs(self):
@@ -144,8 +152,8 @@ class ReplicaMetropolisSampler(object):
 
     def run(self, nepochs = 1, nsteps_per_epoch = 1, verbose = 0):
         for i in range(nepochs):
-            self.sampler.run(nsteps=nsteps_per_epoch)
-            # exchange
+            self.sampler.run(nsteps = nsteps_per_epoch)
+            # Exchange
             for k in range(self.toggle, self.temperatures.size-1, 2):
                 c = -(self.sampler.E[k+1] - self.sampler.E[k]) * (1.0/self.temperatures[k+1] - 1.0/self.temperatures[k])
                 acc = -np.log(np.random.rand()) > c
