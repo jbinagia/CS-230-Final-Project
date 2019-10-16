@@ -1,5 +1,4 @@
 import numpy as np
-import tensorflow as tf
 
 from .system import System
 
@@ -93,7 +92,7 @@ class NematicLattice(System):
 
         fig = plt.figure(figsize = figsize)
         ax = fig.gca(projection = '3d')
-        ax.view_init(elev = 25, azim = 120)
+        ax.view_init(elev = 25, azim = 80)
         ax.set_xlabel("z")
         ax.set_ylabel("y")
         ax.set_zlabel("x")
