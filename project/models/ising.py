@@ -45,7 +45,7 @@ class IsingModel(System):
 
         s = x[i,j]
         nb = self._neighbor_sum(x, i, j)
-        en = -0.5*self.params["J"]*nb*s 
+        en = -self.params["J"]*nb*s 
         en += -self.params["h"]*s
 
         return en
