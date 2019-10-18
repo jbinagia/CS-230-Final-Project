@@ -4,7 +4,7 @@ import numpy as np
 
 class WangLandauSampler(object):
 
-    def __init__(self, model, bounds, nbins = 100, df = 0.5, tol = 0.2,
+    def __init__(self, model, x0, bounds, nbins = 100, df = 0.5, tol = 0.2,
         temperature = 1.0, burnin = 0, mapper = None, **kwargs):
         """Metropolis Monte-Carlo simulation.
 
@@ -43,7 +43,22 @@ class WangLandauSampler(object):
         self.df = df
         self.tol = tol
         self.nbins = nbins
-        self.bounds = np.array([bounds[0], bounds[1]])
+
+        doprm = 1/nbins if not kwargs.get("doprm") else kwargs.get("doprm")
+        self.bounds = np.array([bounds[0] - doprm, bounds[1] + doprm])
+
+        # Set initial coordinates and WL structures
+        self.reset(x0)
+
+    def _roughness(self):
+        """Measure of flatness of histogram."""
+        hm = np.mean(self.hist)
+        rough = np.max(self.hist - hm) / hm
+        return rough
+
+    def _bin_id(self, oprm):
+        bid = np.digitize(oprm, self.lims, right = False) - 1
+        return bid
 
     def _proposal_step(self):
         # Proposal step
@@ -56,12 +71,14 @@ class WangLandauSampler(object):
         self.bid_prop = self._bin_id(self.oprm_prop)
 
     def _acceptance_step(self):
-        # Acceptance step
-        dE = self.E_idx_prop - self.E_idx
-        dW = self.gn[self.bid_prop] - self.gn[self.bid]
-        dE_WL = dE/self.temperature + dW
+        # Only sample if we are within the bounded range, else reject w/o statistics?
+        if 0 <= self.bid_prop < self.bins.size:
 
-        if 0 <= self.bid_prop < self.nbins:
+            # Acceptance step
+            dE = self.E_idx_prop - self.E_idx
+            dW = self.gn[self.bid_prop] - self.gn[self.bid]
+            dE_WL = dE/self.temperature + dW
+
             acc = True if dE_WL < 0.0 else np.random.rand() < np.exp(-dE_WL)
             if acc:
                 self.x = self.x_prop
@@ -69,23 +86,18 @@ class WangLandauSampler(object):
                 self.oprm = self.oprm_prop
                 self.bid = self.bid_prop
 
-        self.hist[self.bid] += 1      # Adjust the histogram for the new state
-        self.gn[self.bid] += self.df  # Adjust the density of states by the log scale factor
+            self.hist[self.bid] += 1      # Adjust the histogram for the new state
+            self.gn[self.bid] += self.df  # Adjust the density of states by the log scale factor
 
-    def _roughness(self):
-        """Measure of flatness of histogram."""
-        hm = np.mean(self.hist)
-        return np.max(self.hist - hm) / hm
-
-    def _bin_id(self, oprm):
-        bid = np.digitize(oprm - 1e-8, self.lims) - 1
-        bid = np.maximum(0, np.minimum(bid, len(self.bins)-1)) # Ensure is bounded
-        return bid
+        else:
+            raise ValueError("Bin ID outside of histogram range.")
 
     def _reset_wl(self):
-        self.lims = np.linspace(self.bounds[0], self.bounds[1], self.nbins + 1)
+        self.epoch = 1
+
+        self.lims = np.linspace(self.bounds[0], self.bounds[1], self.nbins + 2)
         self.bins = (self.lims[1:] + self.lims[:-1]) / 2
-        self.hist = np.ones(self.nbins)
+        self.hist = np.ones(self.bins.size)
         self.gn = -np.log(self.hist)
 
         self.oprm = self.model.oprm(self.x)
@@ -97,6 +109,7 @@ class WangLandauSampler(object):
         self.traj_ = []
         self.etraj_ = []
         self.otraj_ = []
+        self.htraj_ = []
         self.gtraj_ = []
 
         # Initial configuration
@@ -110,9 +123,10 @@ class WangLandauSampler(object):
         # Save first frame if no burnin
         if self.burnin == 0:
             self.steps_.append(0)
-            self.traj_.append(self.x)
+            self.traj_.append(self.x.copy())
             self.etraj_.append(self.E / self.model.num_sites(self.x))
             self.otraj_.append(self.oprm)
+            self.htraj_.append(self.hist)
             self.gtraj_.append(self.gn)
 
     @property
@@ -132,19 +146,20 @@ class WangLandauSampler(object):
         return np.array(self.otraj_)
 
     @property
+    def htraj(self):
+        return np.array(self.htraj_)
+
+    @property
     def gtraj(self):
         return np.array(self.gtraj_)
 
-    def run(self, x0, nsteps, nwl = 100, stride = 1, verbose = False, **kwargs):
+    def run(self, nsteps, nwl = 100, stride = 1, verbose = False, **kwargs):
         if kwargs.get("seed"):
             np.random.seed(kwargs.get("seed"))
 
-        # Set initial coordinates and WL structures
-        self.reset(x0)
-
-        step, epoch = 1, 1
+        step = 1
         if verbose > 0:
-            print("Starting WL-Epoch {}.".format(epoch))
+            print("Starting at WL-Epoch {}.".format(self.epoch))
 
         while step <= nsteps:
             self._proposal_step()
@@ -160,13 +175,15 @@ class WangLandauSampler(object):
             # Check for WL completeness
             if step % nwl == 0:
                 if self._roughness() < self.tol:
-                    epoch += 1
+                    self.epoch += 1
+
                     if verbose:
-                        print("Entering WL-Epoch {:.0f} (step = {:.0f} / {:.0f}).".format(epoch, step, nsteps))
+                        print("Entering WL-Epoch {:.0f} (step = {:.0f} / {:.0f}).".format(self.epoch, step, nsteps))
 
                     self.df *= 0.5
                     self.gn = self.gn - np.max(self.gn)
+                    self.htraj_.append(self.hist.copy())
                     self.gtraj_.append(-self.gn)
-                    self.hist = np.ones(self.nbins)
+                    self.hist = np.ones(self.bins.size)
 
             step += 1

@@ -1,5 +1,7 @@
 import numpy as np
+import scipy.special
 
+from ..utils import rotation_matrix
 from .system import System
 
 #################################################################################
@@ -17,20 +19,27 @@ class NematicLattice(System):
     def __init__(self, params = None, **kwargs):
         # Init parent class
         super().__init__(params, **kwargs)
-        self.field = np.array([0.0, 0.0, 1.0]) # Nematic field always points to z, coupling value `h` dictates contribution
+        self.field = np.array([0.0, 0.0, 1.0])
 
     def init_coords(self, N, **kwargs):
         if kwargs.get("seed"):
             np.random.seed(kwargs.get("seed"))
 
         shape = (N, N, N, 3)
-        vecs = [np.array([1, 0, 0]), np.array([0, 1, 0]), np.array([0, 0, 1])]
 
+        # Fixed orientation
+        vecs = [np.array([1, 0, 0]), np.array([0, 1, 0]), np.array([0, 0, 1])]
         x = np.zeros(shape)
         for i in range(N):
             for j in range(N):
                 for k in range(N):
                     x[i, j, k, :] = vecs[np.random.randint(3)]
+
+        # # Random orientation
+        # x = np.random.rand(*shape)
+        # norms = np.linalg.norm(x, axis = 3).reshape(N**3, 1)
+        # x = (x.reshape(np.prod(x.shape[:-1]), -1) / norms).reshape(*shape)
+
         return x
 
     def energy(self, x):
@@ -40,9 +49,14 @@ class NematicLattice(System):
             for j in range(N):
                 for k in range(N):
                     s = x[i,j,k]
-                    nb = self._neighbor_sum(x, i, j, k)
-                    en += -0.25*self.params["J"]*np.dot(nb, s)
-                    en += -self.params["h"]*np.dot(self.field, s)
+
+                    en += -self.params["h"] * np.dot(self.field, s)
+
+                    # Maier-Saupe theory Legendre polynomial interaction
+                    neigh = self._neighbor_sites(x, i, j, k)
+                    for nb in neigh:
+                        ct = np.dot(s, nb)
+                        en += -0.5*self.params["J"] * self._P2(ct)
 
         return en
 
@@ -51,9 +65,15 @@ class NematicLattice(System):
         i, j, k = np.unravel_index(idx, (N, N, N))
 
         s = x[i,j,k]
-        nb = self._neighbor_sum(x, i, j, k)
-        en = -0.5*self.params["J"]*np.dot(nb, s)
-        en += -self.params["h"]*np.dot(self.field, s)
+        
+        # Dot product with field
+        en = -self.params["h"] * np.dot(self.field, s)
+
+        # Maier-Saupe theory Legendre polynomial interaction
+        neigh = self._neighbor_sites(x, i, j, k)
+        for nb in neigh:
+            ct = np.dot(s, nb)
+            en += -0.5*self.params["J"]*self._P2(ct)
 
         return en
 
@@ -62,27 +82,40 @@ class NematicLattice(System):
         i, j, k = np.random.randint(N, size = 3)
         idx = np.ravel_multi_index((i, j, k), (N, N, N))
 
+        # Fixed orientation change
         new = np.copy(x)
         new[i, j, k, :] = np.roll(x[i, j, k], np.random.randint(1, 3))
+
+        # # Random rotation vector
+        # theta = kwargs.get("theta", np.pi/4)
+        # M = rotation_matrix(np.random.rand(3), np.random.rand() * theta)
+
+        # new = np.copy(x)
+        # new[i, j, k, :] = np.dot(M, x[i, j, k])
 
         return idx, new
 
     def oprm(self, x):
-        """Order parameter for a NematicLattice is the nematic parameter, S = 3*<sz>/2 - 1/2."""
-        # np.abs so it measures magnitude of alignment w/ field
-        sig_z = np.mean(x[:,:,:,2])
-        S = 3 * sig_z / 2 - 0.5 # Nematic order parameter
+        """Order parameter for a NematicLattice is the nematic parameter, S = 3*<cos(theta)^2>/2 - 1/2."""
+        ct = np.mean(x[:,:,:,2])
+        S = 3 * ct / 2 - 0.5 # Nematic order parameter
+        #sz = np.mean(x[:,:,:,2]**2)
         return S
 
     def num_sites(self, x):
         N = x.shape[0]
         return N**3
 
-    def _neighbor_sum(self, x, i, j, k):
+    def _neighbor_sites(self, x, i, j, k):
         N = x.shape[0]
-        return x[(i+1)%N, j, k] + x[(i-1)%N, j, k] \
-             + x[i, (j+1)%N, k] + x[i, (j-1)%N, k] \
-             + x[i, j, (k+1)%N] + x[i, j, (k-1)%N]
+        return [
+        x[(i+1)%N, j, k], x[(i-1)%N, j, k],
+        x[i, (j+1)%N, k], x[i, (j-1)%N, k],
+        x[i, j, (k+1)%N], x[i, j, (k-1)%N]
+        ]
+
+    def _P2(self, ct):
+        return 1.5*ct**2 - 0.5
 
     #################################################################################
 
