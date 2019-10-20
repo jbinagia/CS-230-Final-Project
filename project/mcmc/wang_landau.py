@@ -159,7 +159,7 @@ class WangLandauSampler(object):
 
         step = 1
         if verbose > 0:
-            print("Starting at WL-Epoch {}.".format(self.epoch))
+            print("Starting at WL-Epoch {}".format(self.epoch))
 
         while step <= nsteps:
             self._proposal_step()
@@ -178,7 +178,7 @@ class WangLandauSampler(object):
                     self.epoch += 1
 
                     if verbose:
-                        print("Entering WL-Epoch {:.0f} (step = {:.0f} / {:.0f}).".format(self.epoch, step, nsteps))
+                        print("Entering WL-Epoch {:.0f} (step = {:.0f} / {:.0f})".format(self.epoch, step, nsteps))
 
                     self.df *= 0.5
                     self.gn = self.gn - np.max(self.gn)
