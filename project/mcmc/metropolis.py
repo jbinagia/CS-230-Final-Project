@@ -43,9 +43,8 @@ class MetropolisSampler(object):
             mapper = DummyMapper()
         self.mapper = mapper
 
+        # Set initial coordinates
         self.reset(x0)
-
-        self.dog = []
 
     def _proposal_step(self):
         # Proposal step
@@ -81,7 +80,7 @@ class MetropolisSampler(object):
         # Save first frame if no burnin
         if self.burnin == 0:
             self.steps_.append(0)
-            self.traj_.append(self.x)
+            self.traj_.append(self.x.copy())
             self.etraj_.append(self.E / self.model.num_sites(self.x[0]))
 
     @property
@@ -117,7 +116,7 @@ class MetropolisSampler(object):
                 print('Step', i, '/', nsteps)
             if self.step > 0 and self.step > self.burnin and self.step % self.stride == 0:
                 self.steps_.append(self.step)
-                self.traj_.append(np.copy(self.x))
+                self.traj_.append(self.x.copy())
                 self.etraj_.append(self.E / self.model.num_sites(self.x[0])) # Per-site energy trajectory
 
 

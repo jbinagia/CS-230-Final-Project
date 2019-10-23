@@ -34,7 +34,7 @@ class IsingModel(System):
             for j in range(N):
                 s = x[i,j]
                 nb = self._neighbor_sum(x, i, j)
-                en += -0.25*self.params["J"]*nb*s
+                en += -0.5*self.params["J"]*nb*s
                 en += -self.params["h"]*s # Linear coupling to each lattice index
 
         return en

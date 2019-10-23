@@ -1,0 +1,4 @@
+2019-10-22 18:56:36,398:INFO: Creating the dataset...
+2019-10-22 18:56:36,399:INFO: - done.
+2019-10-22 18:56:36,410:INFO: Starting evaluation
+2019-10-22 18:56:36,953:INFO: - Eval metrics : accuracy: 0.875 ; loss: 0.472
