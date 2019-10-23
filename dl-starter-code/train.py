@@ -186,7 +186,8 @@ if __name__ == '__main__':
 
     # Define the model and optimizer
     model = net.Net(params).cuda() if params.cuda else net.Net(params)
-    optimizer = optim.Adam(model.parameters(), lr=params.learning_rate)
+    #optimizer = optim.Adam(model.parameters(), lr=params.learning_rate) # we want to exclude the mask from the update step 
+    optimizer = optim.Adam([p for p in model.parameters() if p.requires_grad==True], lr=params.learning_rate)
 
     # fetch loss function and metrics
     loss_fn = net.loss_fn

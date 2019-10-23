@@ -33,7 +33,7 @@ class Net(nn.Module):
         """
         super(Net, self).__init__()
         self.num_channels = params.num_channels
-        
+
         # each of the convolution layers below have the arguments (input_channels, output_channels, filter_size,
         # stride, padding). We also include batch normalisation layers that help stabilise training.
         # For more details on how to use these layers, check out the documentation.
@@ -47,7 +47,7 @@ class Net(nn.Module):
         # 2 fully connected layers to transform the output of the convolution layers to the final output
         self.fc1 = nn.Linear(8*8*self.num_channels*4, self.num_channels*4)
         self.fcbn1 = nn.BatchNorm1d(self.num_channels*4)
-        self.fc2 = nn.Linear(self.num_channels*4, 6)       
+        self.fc2 = nn.Linear(self.num_channels*4, 6)
         self.dropout_rate = params.dropout_rate
 
     def forward(self, s):
@@ -75,7 +75,7 @@ class Net(nn.Module):
         s = s.view(-1, 8*8*self.num_channels*4)             # batch_size x 8*8*num_channels*4
 
         # apply 2 fully connected layers with dropout
-        s = F.dropout(F.relu(self.fcbn1(self.fc1(s))), 
+        s = F.dropout(F.relu(self.fcbn1(self.fc1(s))),
             p=self.dropout_rate, training=self.training)    # batch_size x self.num_channels*4
         s = self.fc2(s)                                     # batch_size x 6
 
@@ -115,6 +115,44 @@ def accuracy(outputs, labels):
     outputs = np.argmax(outputs, axis=1)
     return np.sum(outputs==labels)/float(labels.size)
 
+# defining RealNVP network (https://github.com/senya-ashukha/real-nvp-pytorch/blob/master/real-nvp-pytorch.ipynb)
+class RealNVP(nn.Module):
+    def __init__(self, nets, nett, mask, prior):
+        super(RealNVP, self).__init__()
+
+        self.prior = prior
+        self.mask = nn.Parameter(mask, requires_grad=False)
+        self.t = torch.nn.ModuleList([nett() for _ in range(len(masks))])
+        self.s = torch.nn.ModuleList([nets() for _ in range(len(masks))])
+
+    def g(self, z):
+        x = z
+        for i in range(len(self.t)):
+            x_ = x*self.mask[i]
+            s = self.s[i](x_)*(1 - self.mask[i])
+            t = self.t[i](x_)*(1 - self.mask[i])
+            x = x_ + (1 - self.mask[i]) * (x * torch.exp(s) + t)
+        return x
+
+    def f(self, x):
+        log_det_J, z = x.new_zeros(x.shape[0]), x
+        for i in reversed(range(len(self.t))):
+            z_ = self.mask[i] * z
+            s = self.s[i](z_) * (1-self.mask[i])
+            t = self.t[i](z_) * (1-self.mask[i])
+            z = (1 - self.mask[i]) * (z - t) * torch.exp(-s) + z_
+            log_det_J -= s.sum(dim=1)
+        return z, log_det_J
+
+    def log_prob(self,x):
+        z, logp = self.f(x)
+        return self.prior.log_prob(z) + logp
+
+    def sample(self, batchSize):
+        z = self.prior.sample((batchSize, 1))
+        logp = self.prior.log_prob(z)
+        x = self.g(z)
+        return x
 
 # maintain all metrics required in this dictionary- these are used in the training and evaluation loops
 metrics = {
