@@ -116,7 +116,7 @@ def fetch_dataloader(types, data_dir, params):
             # initialize the data loader
                 # use the train_transformer if training data, else use eval_transformer without random flip
             if split == 'train':
-                dl = DataLoader(CrescentDataset(1000, 0.05), batch_size=params.batch_size, shuffle=True,
+                dl = DataLoader(CrescentDataset(320, 0.05), batch_size=params.batch_size, shuffle=True,
                                         num_workers=params.num_workers,
                                         pin_memory=params.cuda)
                 # dl = DataLoader(SIGNSDataset(path, train_transformer), batch_size=params.batch_size, shuffle=True,
@@ -124,7 +124,7 @@ def fetch_dataloader(types, data_dir, params):
                 #                         pin_memory=params.cuda)
                 # torch.utils.data.DataLoader provides an iterator that takes in a Dataset object and performs batching, shuffling and loading of the data.
             else:
-                dl = DataLoader(CrescentDataset(50, 0.05), batch_size=params.batch_size, shuffle=True,
+                dl = DataLoader(CrescentDataset(100, 0.05), batch_size=params.batch_size, shuffle=True,
                                 num_workers=params.num_workers,
                                 pin_memory=params.cuda)
                 # dl = DataLoader(SIGNSDataset(path, eval_transformer), batch_size=params.batch_size, shuffle=False,

@@ -9,6 +9,8 @@ import torch
 import torch.optim as optim
 from torch.autograd import Variable
 from tqdm import tqdm
+from torch import distributions
+from torch import nn
 
 import utils
 import model.net as net
@@ -49,7 +51,7 @@ def train(model, optimizer, loss_fn, dataloader, metrics, params):
 
     # Use tqdm for progress bar
     with tqdm(total=len(dataloader)) as t:
-        for i, (train_batch, labels_batch) in enumerate(dataloader): # for the i-th batch 
+        for i, (train_batch, labels_batch) in enumerate(dataloader): # for the i-th batch
             # move to GPU if available
             if params.cuda:
                 train_batch, labels_batch = train_batch.cuda(
@@ -60,11 +62,13 @@ def train(model, optimizer, loss_fn, dataloader, metrics, params):
 
             # compute model output and loss
             output_batch = model(train_batch)
-            loss = loss_fn(output_batch, labels_batch)
+            loss = loss_fn(output_batch, model) # for realNVP
+            # loss = loss_fn(output_batch, labels_batch)
 
             # clear previous gradients, compute gradients of all variables wrt loss
             optimizer.zero_grad()
-            loss.backward()
+            #loss.backward()
+            loss.backward(retain_graph=True)
 
             # performs updates using calculated gradients
             optimizer.step()
@@ -185,16 +189,23 @@ if __name__ == '__main__':
     val_dl = dataloaders['val']
     logging.info("- done.")
 
-    # # Define the model and optimizer
+    # Define the model and optimizer
+    nets = lambda: nn.Sequential(nn.Linear(2, 256), nn.LeakyReLU(), nn.Linear(256, 256), nn.LeakyReLU(), nn.Linear(256, 2), nn.Tanh()) # net s
+    nett = lambda: nn.Sequential(nn.Linear(2, 256), nn.LeakyReLU(), nn.Linear(256, 256), nn.LeakyReLU(), nn.Linear(256, 2)) # net t
+    masks = torch.from_numpy(np.array([[0, 1], [1, 0]] * 3).astype(np.float32)) # 6x2 matrix. len(masks) = 6 = num subblocks.
+    prior = distributions.MultivariateNormal(torch.zeros(2), torch.eye(2))      # so we have a total of 3 neural blocks (see fig. 1 of boltzmann generators paper)
+    model = net.RealNVP(nets, nett, masks, prior).cuda() if params.cuda else net.RealNVP(nets, nett, masks, prior)
+    optimizer = optim.Adam([p for p in model.parameters() if p.requires_grad==True], lr=params.learning_rate)
+
     # model = net.Net(params).cuda() if params.cuda else net.Net(params) # Calling .cuda() on a model/Tensor/Variable sends it to the GPU
-    # #optimizer = optim.Adam(model.parameters(), lr=params.learning_rate) # we want to exclude the mask from the update step
-    # optimizer = optim.Adam([p for p in model.parameters() if p.requires_grad==True], lr=params.learning_rate)
-    #
-    # # fetch loss function and metrics
+    # optimizer = optim.Adam(model.parameters(), lr=params.learning_rate) # we want to exclude the mask from the update step
+
+    # fetch loss function and metrics
     # loss_fn = net.loss_fn
-    # metrics = net.metrics
-    #
-    # # Train the model
-    # logging.info("Starting training for {} epoch(s)".format(params.num_epochs))
-    # train_and_evaluate(model, train_dl, val_dl, optimizer, loss_fn, metrics, params, args.model_dir,
-    #                    args.restore_file)
+    loss_fn = net.realnvp_loss_fn
+    metrics = net.metrics
+
+    # Train the model
+    logging.info("Starting training for {} epoch(s)".format(params.num_epochs))
+    train_and_evaluate(model, train_dl, val_dl, optimizer, loss_fn, metrics, params, args.model_dir,
+                       args.restore_file)

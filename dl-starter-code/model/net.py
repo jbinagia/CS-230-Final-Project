@@ -101,6 +101,12 @@ def loss_fn(outputs, labels):
     num_examples = outputs.size()[0]
     return -torch.sum(outputs[range(num_examples), labels])/num_examples
 
+def realnvp_loss_fn(z, model):
+    """
+    """
+
+    return -(model.prior.log_prob(z) + model.logp).mean()
+
 
 def accuracy(outputs, labels):
     """
@@ -116,19 +122,22 @@ def accuracy(outputs, labels):
     return np.sum(outputs==labels)/float(labels.size)
 
 # defining RealNVP network (https://github.com/senya-ashukha/real-nvp-pytorch/blob/master/real-nvp-pytorch.ipynb)
-class RealNVP(nn.Module):
+class RealNVP(nn.Module): # base class Module
     def __init__(self, nets, nett, mask, prior):
         super(RealNVP, self).__init__()
 
         self.prior = prior
         self.mask = nn.Parameter(mask, requires_grad=False)
-        self.t = torch.nn.ModuleList([nett() for _ in range(len(masks))])
-        self.s = torch.nn.ModuleList([nets() for _ in range(len(masks))])
+        self.t = torch.nn.ModuleList([nett() for _ in range(len(mask))]) # translation function (net)
+        self.s = torch.nn.ModuleList([nets() for _ in range(len(mask))]) # scaling function (net)
+        self.logp = 1.0 # initialize to 1
+        # nn.ModuleList is just like a Python list. It was designed to store any desired number of nn.Module’s.
 
     def g(self, z):
         x = z
-        for i in range(len(self.t)):
-            x_ = x*self.mask[i]
+        for i in range(len(self.t)): # for each layer
+            x_ = x*self.mask[i] # splitting features between channels.
+                                # features selected here used to compute s(x) and f(x) but not updated themselves yet.
             s = self.s[i](x_)*(1 - self.mask[i])
             t = self.t[i](x_)*(1 - self.mask[i])
             x = x_ + (1 - self.mask[i]) * (x * torch.exp(s) + t)
@@ -136,16 +145,23 @@ class RealNVP(nn.Module):
 
     def f(self, x):
         log_det_J, z = x.new_zeros(x.shape[0]), x
-        for i in reversed(range(len(self.t))):
-            z_ = self.mask[i] * z
-            s = self.s[i](z_) * (1-self.mask[i])
+        # new_zeros(size) returns a Tensor of size size filled with 0
+        for i in reversed(range(len(self.t))): # move backwards through layers
+            z_ = self.mask[i] * z # tensor of size num samples x num features
+            s = self.s[i](z_) * (1-self.mask[i]) # self.s[i] is the entire sequence of scaling operations
             t = self.t[i](z_) * (1-self.mask[i])
             z = (1 - self.mask[i]) * (z - t) * torch.exp(-s) + z_
             log_det_J -= s.sum(dim=1)
+            # each pass through here applies all operations defined in nets() and all the ones defined in nett()
+        # self.s[1](z_) is not the same as self.s[3](z_)
         return z, log_det_J
 
+    def forward(self, x):
+        z, self.logp = self.f(x)
+        return z
+
     def log_prob(self,x):
-        z, logp = self.f(x)
+        z, logp = self.f(x) # z = f(x)
         return self.prior.log_prob(z) + logp
 
     def sample(self, batchSize):
