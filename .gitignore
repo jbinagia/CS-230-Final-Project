@@ -1,3 +1,3 @@
-dl-starter-code/data/
-dl-starter-code/.env/
-dl-starter-code/__pycache__/
+examples/dl_starter_code/data/
+examples/dl_starter_code/.env/
+examples/dl_starter_code/__pycache__/

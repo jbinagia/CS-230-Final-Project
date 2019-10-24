@@ -159,6 +159,12 @@ def train_and_evaluate(model, train_dataloader, val_dataloader, optimizer, loss_
         utils.save_dict_to_json(val_metrics, last_json_path)
 
 
+    # print("Model's state_dict:")
+    # for param_tensor in model.state_dict():
+    #     print(param_tensor, "\t", model.state_dict()[param_tensor].size())
+    torch.save(model.state_dict(), 'mysave.pt')
+
+
 if __name__ == '__main__':
 
     # Load the parameters from json file
