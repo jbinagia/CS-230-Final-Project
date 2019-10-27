@@ -1,7 +1,0 @@
-numpy
-Pillow
-torch>=1.2
-tabulate
-tqdm
-torchvision
-sklearn 
