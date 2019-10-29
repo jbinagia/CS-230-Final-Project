@@ -1,7 +1,6 @@
 import numpy as np
 
 from .system import System
-from .pbc import Box
 
 #################################################################################
 
@@ -27,28 +26,34 @@ class IsingModel(System):
         return 2 * np.random.randint(0, 2, size = shape) - 1
 
     def energy(self, x):
-        N = x.shape[0]
+        # Non-PBCs
+        neigh = np.zeros_like(x)
+        neigh[:, :-1] += x[:, 1:]
+        neigh[:, 1:] += x[:, :-1]
+        neigh[:-1] += x[1:]
+        neigh[1:] += x[:-1]
 
-        en = 0.0    
-        for i in range(N):
-            for j in range(N):
-                s = x[i,j]
-                nb = self._neighbor_sum(x, i, j)
-                en += -0.5*self.params["J"]*nb*s
-                en += -self.params["h"]*s # Linear coupling to each lattice index
+        # Handle PBCs
+        neigh[0, :] += x[-1, :]
+        neigh[-1, :] += x[0, :]
+        neigh[:, 0] += x[:, -1]
+        neigh[:, -1] += x[:, 0]
 
-        return en
+        en_field = -self.params["h"] * np.sum(x)
+        en_pair = -0.5 * self.params["J"] * np.sum(neigh * x)
+        return en_field + en_pair
 
     def energy_idx(self, x, idx):
         N = x.shape[0]
         i, j = np.unravel_index(idx, (N, N))
 
         s = x[i,j]
-        nb = self._neighbor_sum(x, i, j)
-        en = -0.5*self.params["J"]*nb*s 
-        en += -self.params["h"]*s
+        en_field = -self.params["h"]*s
 
-        return en
+        nb = self._neighbor_sum(x, i, j)
+        en_pair = -0.5*self.params["J"]*nb*s 
+
+        return en_field + en_pair
 
     def step(self, x, **kwargs):
         N = x.shape[0]

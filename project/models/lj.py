@@ -1,9 +1,9 @@
 import numpy as np
 
 from .system import System
-from .pbc import Box
+from .box import Box
 
-from ..utils import lj_potential
+from ..utils import lj_potential, distance_array
 
 #################################################################################
 
@@ -54,26 +54,15 @@ class LJFluid(System):
         return x
 
     def energy(self, x):
-        # Raw calculation with O(N^2) scaling, slow
-        en = 0.0
-        for i in range(len(x)):
-            for j in range(i+1, len(x)):
-                rij = self.box.distance(x[i], x[j])
-                en += lj_potential(rij, self.params["sig"], self.params["eps"])
-
-        return en
+        # Faster distance array computation, self-written (can find faster versions...)
+        dists = distance_array(x, x, box = self.box)
+        mu, nu = np.triu_indices_from(dists, k=1)
+        return np.sum(lj_potential(dists[mu, nu], self.params["sig"], self.params["eps"]))
 
     def energy_idx(self, x, idx):
         # For incremental MCMC updates, single particle, scales O(N)
-        en = 0.0
-        for i in range(len(x)):
-            if i == idx:
-                continue
-            else:
-                rij = self.box.distance(x[idx], x[i])
-                en += lj_potential(rij, self.params["sig"], self.params["eps"])
-
-        return en
+        dists = np.delete(self.box.distance(x[idx], x), idx)
+        return np.sum(lj_potential(dists, self.params["sig"], self.params["eps"]))
 
     def step(self, x, **kwargs):
         delta = kwargs.get("delta", 0.5 * self.params["sig"])

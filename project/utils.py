@@ -21,6 +21,39 @@ def rotation_matrix(axis, theta):
                      [2 * (bd + ac), 2 * (cd - ab), aa + dd - bb - cc]])
 
 #################################################################################
+
+def separation_array(reference, configuration, box = None):
+    """
+    Calculate all possible separation vectors between a reference set and another
+    configuration.
+
+    If there are ``n`` positions in `reference` and ``m`` positions in
+    `configuration`, a separation array of shape ``(n, m, d)`` will be computed,
+    where ``d`` is the dimensionality of each vector.
+
+    If the optional argument `box` is supplied, the minimum image convention is
+    applied when calculating separations.
+    """    
+    refdim =  reference.shape[-1]
+    confdim = configuration.shape[-1]
+    if refdim != confdim:
+        raise ValueError("Configuration dimension of {0} not equal to "
+            "reference dimension of {1}".format(confdim, refdim))
+
+    # Do the whole thing by broadcasting
+    separations = reference[:, np.newaxis] - configuration
+    if box is not None:
+        box.min_image(separations)
+    return separations
+
+def distance_array(reference, configuration, box = None):
+    """
+    Like above, but with the L2 norm distances.
+    """    
+    seps = separation_array(reference, configuration, box = box)
+    return np.linalg.norm(seps, axis = len(seps.shape) - 1)
+
+#################################################################################
 # Atomic potentials
 #################################################################################
 

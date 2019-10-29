@@ -23,14 +23,14 @@ class Box(object):
         return np.prod(self.lengths)
 
     def wrap(self, x):
-        f = np.dot(x, self.h_inv)
-        f -= np.floor(f)
-        return np.dot(f, self.h)
+        nr = np.floor(x / self.lengths)
+        x -= nr*self.lengths
+        return x
 
     def min_image(self, x):
-        f = np.dot(x, self.h_inv)
-        f -= np.round(f)
-        return np.dot(f, self.h)
+        nr = np.rint(x / self.lengths)
+        x -= nr*self.lengths
+        return x
 
     def distance(self, x1, x2):
         dx = self.min_image(x2 - x1)
