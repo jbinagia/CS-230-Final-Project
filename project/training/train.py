@@ -165,8 +165,8 @@ def train_and_evaluate(model, train_dataloader, val_dataloader, optimizer, loss_
 
 
 # if __name__ == '__main__':
-def train(model_dir = 'project/experiments/base_model/', data_dir = 'project/data/crescent/', \
-    torch_save_file = 'testing', restore_file = None):
+def train(model = None, model_dir = 'project/experiments/base_model/', \
+    data_dir = 'project/data/crescent/', torch_save_file = 'testing', restore_file = None):
 
     # define paths
     full_model_path = os.path.join(os.path.dirname(os.getcwd()),model_dir)
@@ -206,11 +206,14 @@ def train(model_dir = 'project/experiments/base_model/', data_dir = 'project/dat
     logging.info("- done.")
 
     # Define the model and optimizer
-    nets = lambda: nn.Sequential(nn.Linear(2, 256), nn.LeakyReLU(), nn.Linear(256, 256), nn.LeakyReLU(), nn.Linear(256, 2), nn.Tanh()) # net s
-    nett = lambda: nn.Sequential(nn.Linear(2, 256), nn.LeakyReLU(), nn.Linear(256, 256), nn.LeakyReLU(), nn.Linear(256, 2)) # net t
-    masks = torch.from_numpy(np.array([[0, 1], [1, 0]] * 3).astype(np.float32)) # 6x2 matrix. len(masks) = 6 = num subblocks.
-    prior = distributions.MultivariateNormal(torch.zeros(2), torch.eye(2))      # so we have a total of 3 neural blocks (see fig. 1 of boltzmann generators paper)
-    model = net.RealNVP(nets, nett, masks, prior).cuda() if params.cuda else net.RealNVP(nets, nett, masks, prior)
+    if model == None: # then use default as defined here
+        nets = lambda: nn.Sequential(nn.Linear(2, 256), nn.LeakyReLU(), nn.Linear(256, 256), nn.LeakyReLU(), nn.Linear(256, 2), nn.Tanh()) # net s
+        nett = lambda: nn.Sequential(nn.Linear(2, 256), nn.LeakyReLU(), nn.Linear(256, 256), nn.LeakyReLU(), nn.Linear(256, 2)) # net t
+        masks = torch.from_numpy(np.array([[0, 1], [1, 0]] * 3).astype(np.float32)) # 6x2 matrix. len(masks) = 6 = num subblocks.
+        prior = distributions.MultivariateNormal(torch.zeros(2), torch.eye(2))      # so we have a total of 3 neural blocks (see fig. 1 of boltzmann generators paper)
+        model = net.RealNVP(nets, nett, masks, prior).cuda() if params.cuda else net.RealNVP(nets, nett, masks, prior)
+    else:
+        model = model.cuda() if params.cuda else model # send to gpu if possivble
     optimizer = optim.Adam([p for p in model.parameters() if p.requires_grad==True], lr=params.learning_rate)
 
     # model = net.Net(params).cuda() if params.cuda else net.Net(params) # Calling .cuda() on a model/Tensor/Variable sends it to the GPU
