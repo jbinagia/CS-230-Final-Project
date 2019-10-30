@@ -99,7 +99,7 @@ def train_model(model, optimizer, loss_fn, dataloader, metrics, params):
 
 
 def train_and_evaluate(model, train_dataloader, val_dataloader, optimizer, loss_fn, metrics, params, model_dir,
-                       restore_file=None):
+                       restore_file=None, torch_save_file = 'testing'):
     """Train the model and evaluate every epoch.
 
     Args:
@@ -161,11 +161,12 @@ def train_and_evaluate(model, train_dataloader, val_dataloader, optimizer, loss_
     # print("Model's state_dict:")
     # for param_tensor in model.state_dict():
     #     print(param_tensor, "\t", model.state_dict()[param_tensor].size())
-    torch.save(model.state_dict(), 'mysave.pt')
+    torch.save(model.state_dict(), 'results/training/' + torch_save_file + '.pt')
 
 
 # if __name__ == '__main__':
-def train(model_dir = 'project/experiments/base_model', data_dir = 'project/data/crescent', restore_file = None):
+def train(model_dir = 'project/experiments/base_model/', data_dir = 'project/data/crescent/', \
+    torch_save_file = 'testing', restore_file = None):
 
     # define paths
     full_model_path = os.path.join(os.path.dirname(os.getcwd()),model_dir)
@@ -175,7 +176,7 @@ def train(model_dir = 'project/experiments/base_model', data_dir = 'project/data
     # Load the parameters from json file
     # args = parser.parse_args() # inspect the command line, convert each argument to the appropriate type and then invoke the appropriate action.
     # json_path = os.path.join(args.model_dir, 'params.json') # json file storing parameters like learning rate
-    json_path = full_model_path + '/params.json' # json file storing parameters like learning rate
+    json_path = full_model_path + 'params.json' # json file storing parameters like learning rate
     assert os.path.isfile(
         json_path), "No json configuration file found at {}".format(json_path)
     params = utils.Params(json_path) # defined in utils.py. Class that loads hyperparameters from a json file.
@@ -225,4 +226,4 @@ def train(model_dir = 'project/experiments/base_model', data_dir = 'project/data
     # train_and_evaluate(model, train_dl, val_dl, optimizer, loss_fn, metrics, params, args.model_dir,
     #                    args.restore_file)
     train_and_evaluate(model, train_dl, val_dl, optimizer, loss_fn, metrics, params, full_model_path,
-                       full_restore_path)
+                       full_restore_path, torch_save_file)
