@@ -40,7 +40,7 @@ def harmonic_potential(r, r0, k):
     return 0.5 * k * (r - r0)**2
 
 #################################################################################
-# Functionality defined in CS 230 PyTorch starter code 
+# Functionality defined in CS 230 PyTorch starter code
 #################################################################################
 
 class Params():
@@ -151,10 +151,11 @@ def save_checkpoint(state, is_best, checkpoint):
     """
     filepath = os.path.join(checkpoint, 'last.pth.tar')
     if not os.path.exists(checkpoint):
-        print("Checkpoint Directory does not exist! Making directory {}".format(checkpoint))
+        #print("Checkpoint Directory does not exist! Making directory {}".format(checkpoint))
         os.mkdir(checkpoint)
     else:
-        print("Checkpoint Directory exists! ")
+        pass
+        #print("Checkpoint Directory exists! ")
     torch.save(state, filepath)
     if is_best:
         shutil.copyfile(filepath, os.path.join(checkpoint, 'best.pth.tar'))

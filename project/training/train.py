@@ -49,7 +49,7 @@ def train_model(model, optimizer, loss_fn, dataloader, metrics, params):
     loss_avg = utils.RunningAverage()
 
     # Use tqdm for progress bar
-    with tqdm(total=len(dataloader)) as t:
+    with tqdm(total=len(dataloader)) as t: # creates both progress bars 
         for i, (train_batch, labels_batch) in enumerate(dataloader): # for the i-th batch
             # move to GPU if available
             if params.cuda:
@@ -88,7 +88,7 @@ def train_model(model, optimizer, loss_fn, dataloader, metrics, params):
             loss_avg.update(loss.item())
 
             t.set_postfix(loss='{:05.3f}'.format(loss_avg())) # adds avg loss to second progress bar
-            t.update() # updates the progress bar 
+            t.update() # updates the progress bar
 
     # compute mean of all metrics in summary
     metrics_mean = {metric: np.mean([x[metric]
