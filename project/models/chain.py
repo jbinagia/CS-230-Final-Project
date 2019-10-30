@@ -1,9 +1,9 @@
 import numpy as np
 
 from .system import System
-from .pbc import Box
+from .box import Box
 
-from ..utils import lj_potential, harmonic_potential
+from ..utils import lj_potential, harmonic_potential, distance_array
 
 #################################################################################
 
@@ -57,33 +57,31 @@ class GaussianChain(System):
         return x
 
     def energy(self, x):
-        # Raw calculation with O(N^2) scaling, slow
-        en_nb = 0.0
-        for i in range(len(x)):
-            for j in range(i+1, len(x)):
-                rij = self.box.distance(x[i], x[j])
-                en_nb += lj_potential(rij, self.params["sig"], self.params["eps"])
+        # Faster distance array computation, self-written (can find faster versions...)
+        dists = distance_array(x, x, box = self.box)
+        mu, nu = np.triu_indices_from(dists, k=1)
+        en_nb = np.sum(lj_potential(dists[mu, nu], self.params["sig"], self.params["eps"]))
 
-        en_b = 0.0
-        for i in range(1, len(x)):
-            rij = self.box.distance(x[i], x[i-1])
-            en_b += harmonic_potential(rij, self.params["r0"], self.params["k"])
+        en_b = np.sum(
+            harmonic_potential(self.box.distance(x[1:], x[:-1]), 
+                self.params["r0"], self.params["k"])
+        )
 
-        return (en_nb + en_b)
+        return en_nb + en_b
 
     def energy_idx(self, x, idx):
-        # For incremental MCMC updates, single particle, scales O(N)
-        en = 0.0
-        for i in range(len(x)):
-            if i == idx:
-                continue
-            else:
-                rij = self.box.distance(x[idx], x[i])
-                en += lj_potential(rij, self.params["sig"], self.params["eps"])
-                if (i == idx-1) or (i == idx+1):
-                    en += harmonic_potential(rij, self.params["r0"], self.params["k"])
+        dists = self.box.distance(x[idx], x)
+        en_nb = np.sum(lj_potential(np.delete(dists, idx), self.params["eps"], self.params["sig"]))
 
-        return en
+        if idx == 0:
+            bonds = dists[1]
+        elif idx == len(x) - 1:
+            bonds = dists[-2]
+        else:
+            bonds = np.asarray([dists[idx-1], dists[idx+1]])
+        en_b = np.sum(harmonic_potential(bonds, self.params["r0"], self.params["k"]))
+
+        return en_nb + en_b
 
     def step(self, x, **kwargs):
         delta = kwargs.get("delta", 0.5 * self.params["sig"])
@@ -96,14 +94,14 @@ class GaussianChain(System):
 
     def oprm(self, x):
         """Order parameter for a GaussianChain is radius of gyration."""
-        xu = self._unwrap(x)
+        xu = chain._unwrap(x)
         com = np.mean(xu, axis = 0)
         xc = xu - com
 
-        rg2 = np.sum(np.linalg.eigvals(
-                np.mean(np.apply_along_axis(lambda x: np.outer(x, x), 1, xc), axis = 0)
-            ))
-        return rg2
+        # Element-wise outer product for each position vector
+        #   Performed by expaning array dimensions and element-wise mult
+        outers = xc[:,:,None]*xc[:,None,:]
+        return np.sum(np.linalg.eigvals(np.mean(outers, axis = 0)))
 
     def num_sites(self, x):
         return x.shape[0]
