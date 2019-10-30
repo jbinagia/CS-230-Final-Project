@@ -12,7 +12,7 @@ from tqdm import tqdm
 from torch import distributions
 from torch import nn
 
-import project.utils as utils 
+import project.utils as utils
 import project.networks.net as net
 import project.networks.data_loader as data_loader
 from project.evaluation.evaluate import evaluate
@@ -165,12 +165,17 @@ def train_and_evaluate(model, train_dataloader, val_dataloader, optimizer, loss_
 
 
 # if __name__ == '__main__':
-def train(model_dir = 'project/experiments/base_model'):
+def train(model_dir = 'project/experiments/base_model', data_dir = 'project/data/crescent', restore_file = None):
+
+    # define paths
+    full_model_path = os.path.join(os.path.dirname(os.getcwd()),model_dir)
+    full_data_path = os.path.join(os.path.dirname(os.getcwd()),data_dir)
+    full_restore_path = (os.path.join(os.path.dirname(os.getcwd()),restore_file) if restore_file is not None else None)
 
     # Load the parameters from json file
     # args = parser.parse_args() # inspect the command line, convert each argument to the appropriate type and then invoke the appropriate action.
     # json_path = os.path.join(args.model_dir, 'params.json') # json file storing parameters like learning rate
-    json_path = os.path.join(os.path.dirname(os.getcwd()),model_dir + '/params.json') # json file storing parameters like learning rate
+    json_path = full_model_path + '/params.json' # json file storing parameters like learning rate
     assert os.path.isfile(
         json_path), "No json configuration file found at {}".format(json_path)
     params = utils.Params(json_path) # defined in utils.py. Class that loads hyperparameters from a json file.
@@ -184,14 +189,17 @@ def train(model_dir = 'project/experiments/base_model'):
         torch.cuda.manual_seed(230)
 
     # Set the logger
-    utils.set_logger(os.path.join(args.model_dir, 'train.log')) # create logger that saves every output to the terminal in a permanent file
+    #utils.set_logger(os.path.join(args.model_dir, 'train.log')) # create logger that saves every output to the terminal in a permanent file
+    utils.set_logger(full_model_path + 'train.log') # create logger that saves every output to the terminal in a permanent file
 
     # Create the input data pipeline
     logging.info("Loading the datasets...")
 
     # fetch dataloaders
+    # dataloaders = data_loader.fetch_dataloader(
+    #     ['train', 'val'], args.data_dir, params)
     dataloaders = data_loader.fetch_dataloader(
-        ['train', 'val'], args.data_dir, params)
+        ['train', 'val'], full_data_path, params)
     train_dl = dataloaders['train']
     val_dl = dataloaders['val']
     logging.info("- done.")
@@ -214,5 +222,7 @@ def train(model_dir = 'project/experiments/base_model'):
 
     # Train the model
     logging.info("Starting training for {} epoch(s)".format(params.num_epochs))
-    train_and_evaluate(model, train_dl, val_dl, optimizer, loss_fn, metrics, params, args.model_dir,
-                       args.restore_file)
+    # train_and_evaluate(model, train_dl, val_dl, optimizer, loss_fn, metrics, params, args.model_dir,
+    #                    args.restore_file)
+    train_and_evaluate(model, train_dl, val_dl, optimizer, loss_fn, metrics, params, full_model_path,
+                       full_restore_path)
