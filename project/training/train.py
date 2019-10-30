@@ -87,8 +87,8 @@ def train_model(model, optimizer, loss_fn, dataloader, metrics, params):
             # update the average loss
             loss_avg.update(loss.item())
 
-            t.set_postfix(loss='{:05.3f}'.format(loss_avg()))
-            t.update()
+            t.set_postfix(loss='{:05.3f}'.format(loss_avg())) # adds avg loss to second progress bar
+            t.update() # updates the progress bar 
 
     # compute mean of all metrics in summary
     metrics_mean = {metric: np.mean([x[metric]
