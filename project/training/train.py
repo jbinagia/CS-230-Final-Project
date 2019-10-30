@@ -12,24 +12,23 @@ from tqdm import tqdm
 from torch import distributions
 from torch import nn
 
-import utils
-import networks.net as net
-import networks.data_loader as data_loader
-from evaluate import evaluate
+import project.utils as utils 
+import project.networks.net as net
+import project.networks.data_loader as data_loader
+from project.evaluation.evaluate import evaluate
 
-parser = argparse.ArgumentParser() # create a parser for command line arguments
-# parser.add_argument('--data_dir', default='data/64x64_SIGNS',
+# the following code was previously used when this script could be ran standalone
+# parser = argparse.ArgumentParser() # create a parser for command line arguments
+# parser.add_argument('--data_dir', default='data/crescent',
 #                     help="Directory containing the dataset")
-parser.add_argument('--data_dir', default='data/crescent',
-                    help="Directory containing the dataset")
-parser.add_argument('--model_dir', default='experiments/base_model',
-                    help="Directory containing params.json")
-parser.add_argument('--restore_file', default=None,
-                    help="Optional, name of the file in --model_dir containing weights to reload before \
-                    training")  # 'best' or 'train'
+# parser.add_argument('--model_dir', default='experiments/base_model',
+#                     help="Directory containing params.json")
+# parser.add_argument('--restore_file', default=None,
+#                     help="Optional, name of the file in --model_dir containing weights to reload before \
+#                     training")  # 'best' or 'train'
 
 
-def train(model, optimizer, loss_fn, dataloader, metrics, params):
+def train_model(model, optimizer, loss_fn, dataloader, metrics, params):
     """Train the model on `num_steps` batches
 
     Args:
@@ -128,7 +127,7 @@ def train_and_evaluate(model, train_dataloader, val_dataloader, optimizer, loss_
         logging.info("Epoch {}/{}".format(epoch + 1, params.num_epochs))
 
         # compute number of batches in one epoch (one full pass over the training set)
-        train(model, optimizer, loss_fn, train_dataloader, metrics, params)
+        train_model(model, optimizer, loss_fn, train_dataloader, metrics, params)
 
         # Evaluate for one epoch on validation set
         val_metrics = evaluate(model, loss_fn, val_dataloader, metrics, params)
@@ -165,11 +164,13 @@ def train_and_evaluate(model, train_dataloader, val_dataloader, optimizer, loss_
     torch.save(model.state_dict(), 'mysave.pt')
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
+def train(model_dir = 'project/experiments/base_model'):
 
     # Load the parameters from json file
-    args = parser.parse_args() # inspect the command line, convert each argument to the appropriate type and then invoke the appropriate action.
-    json_path = os.path.join(args.model_dir, 'params.json') # json file storing parameters like learning rate
+    # args = parser.parse_args() # inspect the command line, convert each argument to the appropriate type and then invoke the appropriate action.
+    # json_path = os.path.join(args.model_dir, 'params.json') # json file storing parameters like learning rate
+    json_path = os.path.join(os.path.dirname(os.getcwd()),model_dir + '/params.json') # json file storing parameters like learning rate
     assert os.path.isfile(
         json_path), "No json configuration file found at {}".format(json_path)
     params = utils.Params(json_path) # defined in utils.py. Class that loads hyperparameters from a json file.

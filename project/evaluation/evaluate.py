@@ -7,9 +7,9 @@ import os
 import numpy as np
 import torch
 from torch.autograd import Variable
-import utils
-import networks.net as net
-import networks.data_loader as data_loader
+import project.utils
+import project.networks.net as net
+import project.networks.data_loader as data_loader
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_dir', default='data/64x64_SIGNS',
