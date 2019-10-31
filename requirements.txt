@@ -5,3 +5,4 @@ tabulate
 tqdm
 torchvision
 sklearn 
+plotly
