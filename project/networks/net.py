@@ -55,27 +55,26 @@ class RealNVP(nn.Module): # base class Module
         x = self.g(z)
         return x
 
+    def my_loss(self, batch, w_ml = 1.0, w_kl = 0.0, w_rc = 0.0):
+        return w_ml*self.loss_ml(batch) + w_kl*self.loss_kl(batch) + w_rc*self.loss_rc(batch)
+
     def loss_ml(self, batch):
         boltzmann_weights = calculate_weights(batch)
         z, log_det_J = self.f(batch)
         return expected_value(0.5*(torch.norm(z,dim=1) - log_det_J), boltzmann_weights)
 
     def loss_kl(self, z):
-        pass
+        return 0.0
 
     def loss_rc(self, batch):
-        pass
-
-    def loss(self, batch, w_ml = 1.0, w_kl = 0.0, w_rc = 0.0):
-        return w_ml*self.loss_ml(batch) + w_kl*self.loss_kl(batch) + w_rc*self.loss_rc(batch)
-
+        return 0.0
 
 def calculate_weights(batch):
     weights = batch.new_ones(batch.shape[0])
     return weights
 
 def expected_value(observable, weights):
-    return torch.dot(obserable,weights)
+    return torch.dot(observable,weights)
 
 def realnvp_loss_fn(z, model):
     """
