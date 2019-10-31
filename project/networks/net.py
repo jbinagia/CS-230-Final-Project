@@ -7,7 +7,7 @@ import torch.nn.functional as F
 
 # defining RealNVP network (https://github.com/senya-ashukha/real-nvp-pytorch/blob/master/real-nvp-pytorch.ipynb)
 class RealNVP(nn.Module): # base class Module
-    def __init__(self, nets, nett, mask, prior, input_dimension):
+    def __init__(self, nets, nett, mask, prior, system, input_dimension):
         super(RealNVP, self).__init__()
 
         self.prior = prior
@@ -16,6 +16,7 @@ class RealNVP(nn.Module): # base class Module
         self.s = torch.nn.ModuleList([nets() for _ in range(len(mask))]) # scaling function (net)
         # nn.ModuleList is basically just like a Python list, used to store a desired number of nn.Module’s.
         self.logp = 1.0 # initialize to 1
+        self.system = system # class of what molecular system are we considering. E.g. Ising.
         self.orig_dimension = input_dimension # tuple describing original dim. of system. e.g. Ising Model with N = 8 would be (8,8)
 
     def g(self, z):
@@ -55,7 +56,7 @@ class RealNVP(nn.Module): # base class Module
         x = self.g(z)
         return x
 
-    def my_loss(self, batch, w_ml = 1.0, w_kl = 0.0, w_rc = 0.0):
+    def loss(self, batch, w_ml = 1.0, w_kl = 0.0, w_rc = 0.0):
         return w_ml*self.loss_ml(batch) + w_kl*self.loss_kl(batch) + w_rc*self.loss_rc(batch)
 
     def loss_ml(self, batch):
@@ -64,6 +65,7 @@ class RealNVP(nn.Module): # base class Module
         return expected_value(0.5*(torch.norm(z,dim=1) - log_det_J), boltzmann_weights)
 
     def loss_kl(self, z):
+        #print(self.system.energy(self.g(z))) # energy is expected numpy array not PyTorch tensor
         return 0.0
 
     def loss_rc(self, batch):
