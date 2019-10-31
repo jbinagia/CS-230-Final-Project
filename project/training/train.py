@@ -49,7 +49,7 @@ def train_model(model, optimizer, loss_fn, dataloader, metrics, params):
     loss_avg = utils.RunningAverage()
 
     # Use tqdm for progress bar
-    with tqdm(total=len(dataloader)) as t: # creates both progress bars 
+    with tqdm(total=len(dataloader)) as t: # creates both progress bars
         for i, (train_batch, labels_batch) in enumerate(dataloader): # for the i-th batch
             # move to GPU if available
             if params.cuda:
@@ -61,7 +61,7 @@ def train_model(model, optimizer, loss_fn, dataloader, metrics, params):
 
             # compute model output and loss
             output_batch = model(train_batch)
-            loss = loss_fn(output_batch, model) # for realNVP
+            loss = net.realnvp_loss_fn(output_batch, model) # for realNVP
             # loss = loss_fn(output_batch, labels_batch)
 
             # clear previous gradients, compute gradients of all variables wrt loss

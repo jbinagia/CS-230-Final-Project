@@ -7,15 +7,16 @@ import torch.nn.functional as F
 
 # defining RealNVP network (https://github.com/senya-ashukha/real-nvp-pytorch/blob/master/real-nvp-pytorch.ipynb)
 class RealNVP(nn.Module): # base class Module
-    def __init__(self, nets, nett, mask, prior):
+    def __init__(self, nets, nett, mask, prior, input_dimension):
         super(RealNVP, self).__init__()
 
         self.prior = prior
         self.mask = nn.Parameter(mask, requires_grad=False)
         self.t = torch.nn.ModuleList([nett() for _ in range(len(mask))]) # translation function (net)
         self.s = torch.nn.ModuleList([nets() for _ in range(len(mask))]) # scaling function (net)
+        # nn.ModuleList is basically just like a Python list, used to store a desired number of nn.Module’s.
         self.logp = 1.0 # initialize to 1
-        # nn.ModuleList is just like a Python list. It was designed to store any desired number of nn.Module’s.
+        self.orig_dimension = input_dimension # tuple describing original dim. of system. e.g. Ising Model with N = 8 would be (8,8)
 
     def g(self, z):
         x = z
@@ -54,11 +55,37 @@ class RealNVP(nn.Module): # base class Module
         x = self.g(z)
         return x
 
+    def loss(self,batch, w_ml = 0.5, w_kl = 0.5, w_rc = 0.0):
+        return w_ml*loss_ml(self,batch) + w_kl*loss_kl(self,batch) + w_rc*loss_rc(self,batch)
+
     def loss_ml(self, batch):
         pass
 
     def loss_kl(self, batch):
         pass
+
+    def loss_rc(self, batch):
+        pass
+
+def realnvp_loss_fn(z, model):
+    """
+    """
+
+    return -(model.prior.log_prob(z) + model.logp).mean()
+
+# Define performance metrics related to our network architecture
+def accuracy(outputs, labels):
+    """
+    Compute the accuracy, given the outputs and labels for all images.
+
+    Args:
+        outputs: (np.ndarray) dimension batch_size x 6 - log softmax output of the model
+        labels: (np.ndarray) dimension batch_size, where each element is a value in [0, 1, 2, 3, 4, 5]
+
+    Returns: (float) accuracy in [0,1]
+    """
+    outputs = np.argmax(outputs, axis=1)
+    return np.sum(outputs==labels)/float(labels.size)
 
 # maintain all metrics required in this dictionary- these are used in the training and evaluation loops
 metrics = {
