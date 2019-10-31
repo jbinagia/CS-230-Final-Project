@@ -122,7 +122,7 @@ class InvNet(object):
         else:
             return self.TzxJ.predict(z)[1][:, 0]
 
-    @property
+    @property # motivation for @property appelation https://www.machinelearningplus.com/python/python-property/
     def log_det_Jxz(self):
         """ Log of |det(dz/dx)| for the current batch. Format is batchsize x 1 or a number """
         #return self.log_det_xz.output
@@ -1016,4 +1016,3 @@ def create_RealNVPNet(energy_model, nlayers=10, nl_layers=2, nl_hidden=100,
     return invnet(energy_model.dim, layer_types, energy_model=energy_model, channels=channels,
                   nl_layers=nl_layers, nl_hidden=nl_hidden, nl_activation=nl_activation,
                   nl_activation_scale=nl_activation_scale, scale=None, prior=prior, **layer_args)
-

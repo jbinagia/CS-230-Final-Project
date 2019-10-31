@@ -30,7 +30,7 @@ class RealNVP(nn.Module): # base class Module
 
     def f(self, x):
         log_det_J, z = x.new_zeros(x.shape[0]), x
-        # new_zeros(size) returns a Tensor of size size filled with 0
+        # new_zeros(size) returns a Tensor of size "size" filled with 0s
         for i in reversed(range(len(self.t))): # move backwards through layers
             z_ = self.mask[i] * z # tensor of size num samples x num features
             s = self.s[i](z_) * (1-self.mask[i]) # self.s[i] is the entire sequence of scaling operations
@@ -55,17 +55,27 @@ class RealNVP(nn.Module): # base class Module
         x = self.g(z)
         return x
 
-    def loss(self,batch, w_ml = 0.5, w_kl = 0.5, w_rc = 0.0):
-        return w_ml*loss_ml(self,batch) + w_kl*loss_kl(self,batch) + w_rc*loss_rc(self,batch)
-
     def loss_ml(self, batch):
-        pass
+        boltzmann_weights = calculate_weights(batch)
+        z, log_det_J = self.f(batch)
+        return expected_value(0.5*(torch.norm(z,dim=1) - log_det_J), boltzmann_weights)
 
-    def loss_kl(self, batch):
+    def loss_kl(self, z):
         pass
 
     def loss_rc(self, batch):
         pass
+
+    def loss(self, batch, w_ml = 1.0, w_kl = 0.0, w_rc = 0.0):
+        return w_ml*self.loss_ml(batch) + w_kl*self.loss_kl(batch) + w_rc*self.loss_rc(batch)
+
+
+def calculate_weights(batch):
+    weights = batch.new_ones(batch.shape[0])
+    return weights
+
+def expected_value(observable, weights):
+    return torch.dot(obserable,weights)
 
 def realnvp_loss_fn(z, model):
     """
