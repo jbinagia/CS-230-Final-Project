@@ -76,7 +76,7 @@ def calculate_weights(batch):
     return weights
 
 def expected_value(observable, weights):
-    return torch.dot(observable,weights)
+    return torch.dot(observable,weights)/torch.sum(weights)
 
 def realnvp_loss_fn(z, model):
     """
