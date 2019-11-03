@@ -40,8 +40,8 @@ class IsingModel(System):
         neigh[:, 0] += x[:, -1]
         neigh[:, -1] += x[:, 0]
 
-        en_field = -self.params["h"] * torch.sum(x)
-        en_pair = -0.5 * self.params["J"] * torch.sum(neigh * x)
+        en_field = -self.params["h"] * torch.sum(x, 1)
+        en_pair = -0.5 * self.params["J"] * torch.sum(neigh * x, 1)
         return en_field + en_pair
 
     def energy_idx(self, x, idx):

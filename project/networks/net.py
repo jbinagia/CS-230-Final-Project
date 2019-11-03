@@ -32,6 +32,8 @@ class RealNVP(nn.Module): # base class Module
 
     def f(self, x):
         log_R_xz, z = x.new_zeros(x.shape[0]), x
+        # log_R_xz, z = x.new_zeros((x.shape[0],1)), x # if we want to keep the dimension
+
         # new_zeros(size) returns a Tensor of size "size" filled with 0s
         for i in reversed(range(len(self.t))): # move backwards through layers
             z_ = self.mask[i] * z # tensor of size num samples x num features
@@ -62,25 +64,28 @@ class RealNVP(nn.Module): # base class Module
         return w_ml*self.loss_ml(batch) + w_kl*self.loss_kl(batch) + w_rc*self.loss_rc(batch)
 
     def loss_ml(self, batch):
-        z, log_det_J = self.f(batch)
-        return expected_value(0.5*(torch.norm(z,dim=1) - log_det_J), batch)
+        z, log_R_xz = self.f(batch)
+        self.weights = self.calculate_weights(batch, z, log_R_xz)
+        return self.expected_value(0.5*(torch.norm(z,dim=1) - log_R_xz), batch)
 
-    def loss_kl(self, x):
+    def loss_kl(self, batch):
         # x, log_R_zx = self.g(z)
         log_R_zx = -self.log_R_xz
-        return expected_value(self.system.energy(x) - log_R_zx), batch) # work in progress
+        return self.expected_value(self.system.energy(batch) - log_R_zx, batch)
         return 0.0
 
     def loss_rc(self, batch):
         return 0.0
 
-def calculate_weights(batch):
-    weights = batch.new_ones(batch.shape[0])
-    return weights
+    def calculate_weights(self, batch, z, log_R_xz):
+        weights = batch.new_ones(batch.shape[0])
+        for i in range(batch.shape[0]): # for each x in the batch
+            log_prob_x = self.prior.log_prob(z[i:i+1,:]) + log_R_xz[i:i+1]
+            #weights[i] = torch.exp(-self.system.energy(batch[i:i+1,:])-log_prob_x) # currently all weights are infinitely large
+        return weights
 
-def expected_value(observable, batch):
-    weights = calculate_weights(batch)
-    return torch.dot(observable,weights)/torch.sum(weights)
+    def expected_value(self, observable, batch):
+        return torch.dot(observable,self.weights)/torch.sum(self.weights)
 
 def realnvp_loss_fn(z, model):
     """
