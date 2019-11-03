@@ -20,27 +20,29 @@ class RealNVP(nn.Module): # base class Module
         self.orig_dimension = input_dimension # tuple describing original dim. of system. e.g. Ising Model with N = 8 would be (8,8)
 
     def g(self, z):
-        x = z
+        log_R_zx, x = z.new_zeros(z.shape[0]), z
         for i in range(len(self.t)): # for each layer
             x_ = x*self.mask[i] # splitting features between channels.
                                 # features selected here used to compute s(x) and f(x) but not updated themselves yet.
             s = self.s[i](x_)*(1 - self.mask[i])
             t = self.t[i](x_)*(1 - self.mask[i])
             x = x_ + (1 - self.mask[i]) * (x * torch.exp(s) + t)
-        return x
+            log_R_zx += s.sum(dim=1)
+        return x, log_R_zx
 
     def f(self, x):
-        log_det_J, z = x.new_zeros(x.shape[0]), x
+        log_R_xz, z = x.new_zeros(x.shape[0]), x
         # new_zeros(size) returns a Tensor of size "size" filled with 0s
         for i in reversed(range(len(self.t))): # move backwards through layers
             z_ = self.mask[i] * z # tensor of size num samples x num features
             s = self.s[i](z_) * (1-self.mask[i]) # self.s[i] is the entire sequence of scaling operations
             t = self.t[i](z_) * (1-self.mask[i])
             z = (1 - self.mask[i]) * (z - t) * torch.exp(-s) + z_
-            log_det_J -= s.sum(dim=1)
+            log_R_xz -= s.sum(dim=1)
             # each pass through here applies all operations defined in nets() and all the ones defined in nett()
         # self.s[1](z_) is not the same as self.s[3](z_)
-        return z, log_det_J
+        self.log_R_xz = log_R_xz # save so we can reference it later
+        return z, log_R_xz
 
     def forward(self, x):
         z, self.logp = self.f(x)
@@ -53,7 +55,7 @@ class RealNVP(nn.Module): # base class Module
     def sample(self, batchSize):
         z = self.prior.sample((batchSize, 1))
         logp = self.prior.log_prob(z)
-        x = self.g(z)
+        x, log_R_zx = self.g(z)
         return x
 
     def loss(self, batch, w_ml = 1.0, w_kl = 0.0, w_rc = 0.0):
@@ -63,8 +65,10 @@ class RealNVP(nn.Module): # base class Module
         z, log_det_J = self.f(batch)
         return expected_value(0.5*(torch.norm(z,dim=1) - log_det_J), batch)
 
-    def loss_kl(self, z):
-        #return expected_value(torch.exp(-self.system.energy(self.g(z))), batch) # work in progress
+    def loss_kl(self, x):
+        # x, log_R_zx = self.g(z)
+        log_R_zx = -self.log_R_xz
+        return expected_value(self.system.energy(x) - log_R_zx), batch) # work in progress
         return 0.0
 
     def loss_rc(self, batch):
