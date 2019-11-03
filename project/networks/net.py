@@ -69,20 +69,26 @@ class RealNVP(nn.Module): # base class Module
         return self.expected_value(0.5*(torch.norm(z,dim=1) - log_R_xz), batch)
 
     def loss_kl(self, batch):
-        # x, log_R_zx = self.g(z)
         log_R_zx = -self.log_R_xz
-        return self.expected_value(self.system.energy(batch) - log_R_zx, batch)
-        return 0.0
+        return self.expected_value(self.energies - log_R_zx, batch)
 
     def loss_rc(self, batch):
         return 0.0
 
     def calculate_weights(self, batch, z, log_R_xz):
+        self.energies = self.calculate_energy(batch)
         weights = batch.new_ones(batch.shape[0])
         for i in range(batch.shape[0]): # for each x in the batch
             log_prob_x = self.prior.log_prob(z[i:i+1,:]) + log_R_xz[i:i+1]
             #weights[i] = torch.exp(-self.system.energy(batch[i:i+1,:])-log_prob_x) # currently all weights are infinitely large
         return weights
+
+    def calculate_energy(self, batch):
+        energies = batch.new_zeros(batch.shape[0])
+        for i in range(batch.shape[0]): # for each x in the batch
+            config = batch[i,:].reshape(self.orig_dimension) # reshape into correct form
+            energies[i] = self.system.energy(config)
+        return energies
 
     def expected_value(self, observable, batch):
         return torch.dot(observable,self.weights)/torch.sum(self.weights)

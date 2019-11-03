@@ -12,7 +12,9 @@ class IsingModel(System):
 
     params_default = {
         "h" : 0.0,
-        "J" : 1.0
+        "J" : 1.0,
+        "E_high": 1000000,
+        "E_max": 10**12 # cutoff to avoid overflow
     }
 
     def __init__(self, params = None, **kwargs):
@@ -27,6 +29,8 @@ class IsingModel(System):
         return 2 * np.random.randint(0, 2, size = shape) - 1
 
     def energy(self, x):
+        assert x.shape[0] == x.shape[1] # x must be square and not flattened
+
         # Non-PBCs
         neigh = torch.zeros_like(x)
         neigh[:, :-1] += x[:, 1:]
@@ -40,9 +44,36 @@ class IsingModel(System):
         neigh[:, 0] += x[:, -1]
         neigh[:, -1] += x[:, 0]
 
-        en_field = -self.params["h"] * torch.sum(x, 1)
-        en_pair = -0.5 * self.params["J"] * torch.sum(neigh * x, 1)
+        en_field = -self.params["h"] * torch.sum(x)
+        en_pair = -0.5 * self.params["J"] * torch.sum(neigh * x)
+
+        # regularize energy
+        tmp_energy = en_field + en_pair
+        if  tmp_energy < self.params["E_high"]:
+            return tmp_energy
+        elif tmp_energy  >= self.params["E_high"] and tmp_energy < self.params["E_max"]:
+            return self.params["E_high"] + np.log(tmp_energy - self.params["E_high"] + 1)
+        elif tmp_energy > self.params["E_max"]:
+            return self.params["E_high"] + np.log(self.params["E_max"] - self.params["E_high"] + 1)
+
+    def energy_vec(self, x):
+        # Non-PBCs
+        neigh = torch.zeros_like(x)
+        neigh[:, :-1] += x[:, 1:]
+        neigh[:, 1:] += x[:, :-1]
+        neigh[:-1] += x[1:]
+        neigh[1:] += x[:-1]
+
+        # Handle PBCs
+        neigh[0, :] += x[-1, :]
+        neigh[-1, :] += x[0, :]
+        neigh[:, 0] += x[:, -1]
+        neigh[:, -1] += x[:, 0]
+
+        en_field = -self.params["h"] * torch.sum(x,1)
+        en_pair = -0.5 * self.params["J"] * torch.sum(neigh * x,1)
         return en_field + en_pair
+
 
     def energy_idx(self, x, idx):
         N = x.shape[0]
