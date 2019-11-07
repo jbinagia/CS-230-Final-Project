@@ -20,14 +20,14 @@ class RealNVP(nn.Module): # base class Module
         self.orig_dimension = input_dimension # tuple describing original dim. of system. e.g. Ising Model with N = 8 would be (8,8)
 
     def g(self, z):
-        log_R_zx, x = z.new_zeros(z.shape[0]), z
+        log_R_zx, x = z.new_zeros(z.shape[0],1), z
         for i in range(len(self.t)): # for each layer
             x_ = x*self.mask[i] # splitting features between channels.
                                 # features selected here used to compute s(x) and f(x) but not updated themselves yet.
             s = self.s[i](x_)*(1 - self.mask[i])
             t = self.t[i](x_)*(1 - self.mask[i])
             x = x_ + (1 - self.mask[i]) * (x * torch.exp(s) + t)
-            log_R_zx += s.sum(dim=1)
+            log_R_zx += s.sum(dim=-1) 
         return x, log_R_zx
 
     def f(self, x):
@@ -40,7 +40,7 @@ class RealNVP(nn.Module): # base class Module
             s = self.s[i](z_) * (1-self.mask[i]) # self.s[i] is the entire sequence of scaling operations
             t = self.t[i](z_) * (1-self.mask[i])
             z = (1 - self.mask[i]) * (z - t) * torch.exp(-s) + z_
-            log_R_xz -= s.sum(dim=1)
+            log_R_xz -= s.sum(dim=-1)
             # each pass through here applies all operations defined in nets() and all the ones defined in nett()
         # self.s[1](z_) is not the same as self.s[3](z_)
         self.log_R_xz = log_R_xz # save so we can reference it later
@@ -55,7 +55,7 @@ class RealNVP(nn.Module): # base class Module
         return self.prior.log_prob(z) + logp
 
     def sample(self, batchSize):
-        z = self.prior.sample((batchSize, 1))
+        z = self.prior.sample((batchSize,1)) # was (batchSize,1), KH removed second dimension
         logp = self.prior.log_prob(z)
         x, log_R_zx = self.g(z)
         return x
