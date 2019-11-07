@@ -34,4 +34,7 @@ class SHOModel(System):
         return 2 * np.random.randint(0, 2, size = shape) - 1
 
     def energy(self, x):
-        return self.params['k']*np.power(x[:,1]-x[:,0],2) 
+        if (len(x.shape) > 1):
+           return self.params['k']*np.power(x[:,1]-x[:,0],2) 
+        else:
+           return self.params['k']*np.power(x[1]-x[0],2) 
