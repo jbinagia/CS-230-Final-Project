@@ -27,7 +27,7 @@ class RealNVP(nn.Module): # base class Module
             s = self.s[i](x_)*(1 - self.mask[i])
             t = self.t[i](x_)*(1 - self.mask[i])
             x = x_ + (1 - self.mask[i]) * (x * torch.exp(s) + t)
-            log_R_zx += s.sum(dim=-1) 
+            log_R_zx += s.sum(dim=-1)
         return x, log_R_zx
 
     def f(self, x):
@@ -55,7 +55,7 @@ class RealNVP(nn.Module): # base class Module
         return self.prior.log_prob(z) + logp
 
     def sample(self, batchSize):
-        z = self.prior.sample((batchSize,1)) # was (batchSize,1), KH removed second dimension
+        z = self.prior.sample((batchSize,1)) # was (batchSize,1), KH removed second dimension. This input is sample shape. 
         logp = self.prior.log_prob(z)
         x, log_R_zx = self.g(z)
         return x
