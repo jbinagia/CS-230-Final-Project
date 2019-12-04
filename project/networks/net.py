@@ -20,19 +20,19 @@ class RealNVP(nn.Module): # base class Module
         self.orig_dimension = input_dimension # tuple describing original dim. of system. e.g. Ising Model with N = 8 would be (8,8)
 
     def g(self, z):
-        log_R_zx, x = z.new_zeros(z.shape[0],1), z
+        log_R_zx, x = z.new_zeros(z.shape[0]), z
+        
         for i in range(len(self.t)): # for each layer
             x_ = x*self.mask[i] # splitting features between channels.
                                 # features selected here used to compute s(x) and f(x) but not updated themselves yet.
             s = self.s[i](x_)*(1 - self.mask[i])
             t = self.t[i](x_)*(1 - self.mask[i])
             x = x_ + (1 - self.mask[i]) * (x * torch.exp(s) + t)
-            log_R_zx += s.sum(dim=-1)
+            log_R_zx += torch.sum(s,-1)
         return x, log_R_zx
 
     def f(self, x):
         log_R_xz, z = x.new_zeros(x.shape[0]), x
-        # log_R_xz, z = x.new_zeros((x.shape[0],1)), x # if we want to keep the dimension
 
         # new_zeros(size) returns a Tensor of size "size" filled with 0s
         for i in reversed(range(len(self.t))): # move backwards through layers
@@ -55,7 +55,7 @@ class RealNVP(nn.Module): # base class Module
         return self.prior.log_prob(z) + logp
 
     def sample(self, batchSize):
-        z = self.prior.sample((batchSize,1)) # was (batchSize,1), KH removed second dimension. This input is sample shape. 
+        z = self.prior.sample_n(batchSize) # was (batchSize,1), KH removed second dimension. This input is sample shape.
         logp = self.prior.log_prob(z)
         x, log_R_zx = self.g(z)
         return x
