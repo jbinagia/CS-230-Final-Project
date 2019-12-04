@@ -21,7 +21,7 @@ class RealNVP(nn.Module): # base class Module
 
     def g(self, z):
         log_R_zx, x = z.new_zeros(z.shape[0]), z
-        
+
         for i in range(len(self.t)): # for each layer
             x_ = x*self.mask[i] # splitting features between channels.
                                 # features selected here used to compute s(x) and f(x) but not updated themselves yet.
@@ -38,9 +38,9 @@ class RealNVP(nn.Module): # base class Module
         for i in reversed(range(len(self.t))): # move backwards through layers
             z_ = self.mask[i] * z # tensor of size num samples x num features
             s = self.s[i](z_) * (1-self.mask[i]) # self.s[i] is the entire sequence of scaling operations
-            t = self.t[i](z_) * (1-self.mask[i])
-            z = (1 - self.mask[i]) * (z - t) * torch.exp(-s) + z_
-            log_R_xz -= s.sum(dim=-1)
+        #     t = self.t[i](z_) * (1-self.mask[i])
+        #     z = (1 - self.mask[i]) * (z - t) * torch.exp(-s) + z_
+        #     log_R_xz -= s.sum(dim=-1)
             # each pass through here applies all operations defined in nets() and all the ones defined in nett()
         # self.s[1](z_) is not the same as self.s[3](z_)
         self.log_R_xz = log_R_xz # save so we can reference it later
