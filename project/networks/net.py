@@ -66,44 +66,57 @@ class RealNVP(nn.Module): # base class Module
     def loss_ml(self, batch):
         z, log_R_xz = self.f(batch)
         self.energies = self.calculate_energy(batch)
-        return self.expected_value(0.5*torch.norm(z,dim=1)**2 - log_R_xz, batch)
+        return self.expected_value(0.5*torch.norm(z,dim=1)**2 - log_R_xz)
 
-    def loss_kl(self, batch):
-        log_R_zx = -self.log_R_xz
-        return self.expected_value(self.energies - log_R_zx, batch)
+    def loss_kl(self, batch_z,iter):
+        x, log_R_zx = self.g(batch_z)
 
-    def test_loss(self, batch, iter):
-        z, log_R_xz = self.f(batch)
-        self.energies = self.calculate_energy(self.g(z)[0])
+        self.energies = self.calculate_energy(x)
+        # e_high = 10**4
+        # if iter % 25 == 0:
+        #     print("")
+        #     print("Avg. E was: ", torch.norm(self.energies))
+        # for energy in self.energies:
+        #     if abs(energy) == float('inf'):
+        #         print("energy overflow detected")
+        #     elif energy > e_high:
+        #         print("large energy detected")
+        #         energy = e_high + torch.log(energy - e_high + 1.0)
+
+        if iter % 25 == 0:
+            print("Avg. position from batch is: ",torch.norm(batch_z)) # this should be constant
+            print("Avg. g(z) is: ", torch.norm(x)) # this should change as g(z) changes
+            print("Avg. E is (after regularizing): ", torch.norm(self.energies))
+        return self.expected_value(self.energies - log_R_zx)
+
+    def test_loss(self, batch_z, iter):
+        self.energies = self.calculate_energy(self.g(batch_z)[0])
         if iter % 25 == 0:
             print("")
-            print("Avg. position from batch is: ",torch.norm(batch)) # this should be constant
-            print("Avg. z position is: ", torch.norm(z)) # this should change as f(x) changes
-            print("Avg. real space position is: ", torch.norm(self.g(z)[0])) # this should change as z and g(z) change 
+            print("Avg. position from batch is: ",torch.norm(batch_z)) # this should be constant
+            print("Avg. g(z) is: ", torch.norm(self.g(batch_z)[0])) # this should change as g(z) changes
             print("Avg. E is: ", torch.norm(self.energies))
-        return self.expected_value(0.5*torch.norm(z,dim=1)**2 + self.energies, batch)
+        return self.expected_value(self.energies)
 
     def loss_rc(self, batch):
         return 0.0
 
-    # no longer necessary
-    # def calculate_weights(self, batch, z, log_R_xz):
-    #     self.energies = self.calculate_energy(batch)
-    #     weights = batch.new_ones(batch.shape[0])
-    #     for i in range(batch.shape[0]): # for each x in the batch
-    #         log_prob_x = self.prior.log_prob(z[i:i+1,:]) + log_R_xz[i:i+1]
-    #         #weights[i] = torch.exp(-self.system.energy(batch[i:i+1,:])-log_prob_x) # currently all weights are infinitely large
-    #     return weights
-
     def calculate_energy(self, batch):
         energies = batch.new_zeros(batch.shape[0])
+
+        e_high = 10**4
         for i in range(batch.shape[0]): # for each x in the batch
             config = batch[i,:].reshape(self.orig_dimension) # reshape into correct form
             energies[i] = self.system.energy(config)
+            if abs(energies[i]) == float('inf'):
+                    print("energy overflow detected")
+            elif energies[i] > e_high:
+                    energies[i] = e_high + torch.log(energies[i] - e_high + 1.0)
+
         self.weights = torch.exp(-energies) # save Boltzmann weights
         return energies
 
-    def expected_value(self, observable, batch):
+    def expected_value(self, observable):
         return torch.dot(observable,self.weights)/torch.sum(self.weights)
 
 def realnvp_loss_fn(z, model):
@@ -111,23 +124,3 @@ def realnvp_loss_fn(z, model):
     """
 
     return -(model.prior.log_prob(z) + model.logp).mean()
-
-# Define performance metrics related to our network architecture
-def accuracy(outputs, labels):
-    """
-    Compute the accuracy, given the outputs and labels for all images.
-
-    Args:
-        outputs: (np.ndarray) dimension batch_size x 6 - log softmax output of the model
-        labels: (np.ndarray) dimension batch_size, where each element is a value in [0, 1, 2, 3, 4, 5]
-
-    Returns: (float) accuracy in [0,1]
-    """
-    outputs = np.argmax(outputs, axis=1)
-    return np.sum(outputs==labels)/float(labels.size)
-
-# maintain all metrics required in this dictionary- these are used in the training and evaluation loops
-metrics = {
-    'accuracy': accuracy,
-    # could add more metrics such as accuracy for each token type
-}
