@@ -58,7 +58,7 @@ class RealNVP(nn.Module): # base class Module
         z = self.prior.sample_n(batchSize) # was (batchSize,1), KH removed second dimension. This input is sample shape.
         logp = self.prior.log_prob(z)
         x, log_R_zx = self.g(z)
-        return z.detach().numpy() , x.detach().numpy() 
+        return z.detach().numpy() , x.detach().numpy()
 
     def loss(self, batch, w_ml = 1.0, w_kl = 0.0, w_rc = 0.0):
         return w_ml*self.loss_ml(batch) + w_kl*self.loss_kl(batch) + w_rc*self.loss_rc(batch)
@@ -66,12 +66,16 @@ class RealNVP(nn.Module): # base class Module
     def loss_ml(self, batch):
         z, log_R_xz = self.f(batch)
         self.energies = self.calculate_energy(batch)
-        # self.weights = self.calculate_weights(batch, z, log_R_xz)
-        return self.expected_value(0.5*(torch.norm(z,dim=1) - log_R_xz), batch)
+        return self.expected_value(0.5*torch.norm(z,dim=1)**2 - log_R_xz, batch)
 
     def loss_kl(self, batch):
         log_R_zx = -self.log_R_xz
         return self.expected_value(self.energies - log_R_zx, batch)
+
+    def test_loss(self, batch):
+        z, log_R_xz = self.f(batch)
+        self.energies = self.calculate_energy(self.g(z)[0])
+        return self.expected_value(0.5*torch.norm(z,dim=1)**2 + self.energies, batch)
 
     def loss_rc(self, batch):
         return 0.0
