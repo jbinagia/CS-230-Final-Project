@@ -37,7 +37,6 @@ class RealNVP(nn.Module): # base class Module
         # new_zeros(size) returns a Tensor of size "size" filled with 0s
         for i in reversed(range(len(self.t))): # move backwards through layers
             z_ = self.mask[i] * z # tensor of size num samples x num features
-            print(z_.shape,z_.dtype)
             s = self.s[i](z_) * (1-self.mask[i]) # self.s[i] is the entire sequence of scaling operations
             t = self.t[i](z_) * (1-self.mask[i])
             z = (1 - self.mask[i]) * (z - t) * torch.exp(-s) + z_
