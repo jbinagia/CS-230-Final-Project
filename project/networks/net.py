@@ -72,31 +72,12 @@ class RealNVP(nn.Module): # base class Module
         x, log_R_zx = self.g(batch_z)
 
         self.energies = self.calculate_energy(x)
-        # e_high = 10**4
+
         # if iter % 25 == 0:
-        #     print("")
-        #     print("Avg. E was: ", torch.norm(self.energies))
-        # for energy in self.energies:
-        #     if abs(energy) == float('inf'):
-        #         print("energy overflow detected")
-        #     elif energy > e_high:
-        #         print("large energy detected")
-        #         energy = e_high + torch.log(energy - e_high + 1.0)
-
-        if iter % 25 == 0:
-            print("Avg. position from batch is: ",torch.norm(batch_z)) # this should be constant
-            print("Avg. g(z) is: ", torch.norm(x)) # this should change as g(z) changes
-            print("Avg. E is (after regularizing): ", torch.norm(self.energies))
+        #     print("Avg. position from batch is: ",torch.norm(batch_z)) # this should be constant
+        #     print("Avg. g(z) is: ", torch.norm(x)) # this should change as g(z) changes
+        #     print("Avg. E is (after regularizing): ", torch.norm(self.energies))
         return self.expected_value(self.energies - log_R_zx)
-
-    def test_loss(self, batch_z, iter):
-        self.energies = self.calculate_energy(self.g(batch_z)[0])
-        if iter % 25 == 0:
-            print("")
-            print("Avg. position from batch is: ",torch.norm(batch_z)) # this should be constant
-            print("Avg. g(z) is: ", torch.norm(self.g(batch_z)[0])) # this should change as g(z) changes
-            print("Avg. E is: ", torch.norm(self.energies))
-        return self.expected_value(self.energies)
 
     def loss_rc(self, batch):
         return 0.0
