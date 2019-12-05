@@ -72,9 +72,15 @@ class RealNVP(nn.Module): # base class Module
         log_R_zx = -self.log_R_xz
         return self.expected_value(self.energies - log_R_zx, batch)
 
-    def test_loss(self, batch):
+    def test_loss(self, batch, iter):
         z, log_R_xz = self.f(batch)
         self.energies = self.calculate_energy(self.g(z)[0])
+        if iter % 25 == 0:
+            print("")
+            print("Avg. position from batch is: ",torch.norm(batch)) # this should be constant
+            print("Avg. z position is: ", torch.norm(z)) # this should change as f(x) changes
+            print("Avg. real space position is: ", torch.norm(self.g(z)[0])) # this should change as z and g(z) change 
+            print("Avg. E is: ", torch.norm(self.energies))
         return self.expected_value(0.5*torch.norm(z,dim=1)**2 + self.energies, batch)
 
     def loss_rc(self, batch):
