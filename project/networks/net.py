@@ -58,7 +58,7 @@ class RealNVP(nn.Module): # base class Module
         z = self.prior.sample_n(batchSize) # was (batchSize,1), KH removed second dimension. This input is sample shape.
         logp = self.prior.log_prob(z)
         x, log_R_zx = self.g(z)
-        return x
+        return z.detach().numpy() , x.detach().numpy() 
 
     def loss(self, batch, w_ml = 1.0, w_kl = 0.0, w_rc = 0.0):
         return w_ml*self.loss_ml(batch) + w_kl*self.loss_kl(batch) + w_rc*self.loss_rc(batch)
