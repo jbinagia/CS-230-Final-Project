@@ -30,6 +30,6 @@ class DoubleWell(System):
         c = self.params['c']
         d = self.params['d']
         if (len(x.shape) > 1):
-           return a*x[:,0]**4/4 - b*x[:,0]**2/2 + c*x[:,0] + d*x[:,1]**2/2
+           return a*x[:,0]**4 - b*x[:,0]**2 + c*x[:,0] + d*x[:,1]**2/2
         else:
-            return a*x[0]**4/4 - b*x[0]**2/2 + c*x[0] + d*x[1]**2/2
+            return a*x[0]**4 - b*x[0]**2 + c*x[0] + d*x[1]**2/2
