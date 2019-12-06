@@ -68,15 +68,9 @@ class RealNVP(nn.Module): # base class Module
         self.energies = self.calculate_energy(batch)
         return self.expected_value(0.5*torch.norm(z,dim=1)**2 - log_R_xz)
 
-    def loss_kl(self, batch_z,iter):
+    def loss_kl(self, batch_z):
         x, log_R_zx = self.g(batch_z)
-
         self.energies = self.calculate_energy(x)
-
-        # if iter % 25 == 0:
-        #     print("Avg. position from batch is: ",torch.norm(batch_z)) # this should be constant
-        #     print("Avg. g(z) is: ", torch.norm(x)) # this should change as g(z) changes
-        #     print("Avg. E is (after regularizing): ", torch.norm(self.energies))
         return self.expected_value(self.energies - log_R_zx)
 
     def loss_rc(self, batch):
@@ -94,7 +88,7 @@ class RealNVP(nn.Module): # base class Module
             elif energies[i] > e_high:
                     energies[i] = e_high + torch.log(energies[i] - e_high + 1.0)
 
-        self.weights = torch.exp(-energies) # save Boltzmann weights
+        self.weights = torch.exp(-energies*0) # save Boltzmann weights
         return energies
 
     def expected_value(self, observable):
