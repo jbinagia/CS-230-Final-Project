@@ -55,7 +55,7 @@ class RealNVP(nn.Module): # base class Module
         return self.prior.log_prob(z) + logp
 
     def sample(self, batchSize):
-        z = self.prior.sample_n(batchSize) # was (batchSize,1), KH removed second dimension. This input is sample shape.
+        z = self.prior.sample_n(batchSize)
         logp = self.prior.log_prob(z)
         x, log_R_zx = self.g(z)
         return z.detach().numpy() , x.detach().numpy()
@@ -88,14 +88,8 @@ class RealNVP(nn.Module): # base class Module
             elif energies[i] > e_high:
                     energies[i] = e_high + torch.log(energies[i] - e_high + 1.0)
 
-        self.weights = torch.exp(-energies*0) # save Boltzmann weights
+        self.weights = torch.exp(-energies*0.0) # simple average
         return energies
 
     def expected_value(self, observable):
         return torch.dot(observable,self.weights)/torch.sum(self.weights)
-
-def realnvp_loss_fn(z, model):
-    """
-    """
-
-    return -(model.prior.log_prob(z) + model.logp).mean()
