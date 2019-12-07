@@ -49,12 +49,12 @@ class IsingModel(System):
 
         # regularize energy
         tmp_energy = en_field + en_pair
-        if  tmp_energy < self.params["E_high"]:
-            return tmp_energy
-        elif tmp_energy  >= self.params["E_high"] and tmp_energy < self.params["E_max"]:
-            return self.params["E_high"] + np.log(tmp_energy - self.params["E_high"] + 1)
-        elif tmp_energy > self.params["E_max"]:
-            return self.params["E_high"] + np.log(self.params["E_max"] - self.params["E_high"] + 1)
+        # if  tmp_energy < self.params["E_high"]:
+        return tmp_energy
+        # elif tmp_energy  >= self.params["E_high"] and tmp_energy < self.params["E_max"]:
+        #     return self.params["E_high"] + np.log(tmp_energy - self.params["E_high"] + 1)
+        # elif tmp_energy > self.params["E_max"]:
+        #     return self.params["E_high"] + np.log(self.params["E_max"] - self.params["E_high"] + 1)
 
     def energy_vec(self, x):
         # Non-PBCs
