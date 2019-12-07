@@ -73,8 +73,10 @@ class RealNVP(nn.Module): # base class Module
         self.energies = self.calculate_energy(x)
         return self.expected_value(self.energies - log_R_zx)
 
-    def loss_rc(self, batch):
-        return 0.0
+    def loss_kl_ising(self, batch_z):
+        x, log_R_zx = self.g(batch_z)
+        self.energies = self.calculate_energy(torch.sign(x))
+        return self.expected_value(self.energies - log_R_zx)
 
     def calculate_energy(self, batch):
         energies = batch.new_zeros(batch.shape[0])
