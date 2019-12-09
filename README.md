@@ -1,5 +1,5 @@
 # CS-230-Final-Project
-Final project for Stanford CS 230 - Deep learning (Autumn 2019). Our goal is to apply [boltzmann generators](https://arxiv.org/abs/1812.01729) to new molecular systems. A description of our progress on this project can be found in [our milestone writeup](https://github.com/jbinagia/CS-230-Final-Project/blob/master/CS_230_Milestone.pdf).
+Final project for Stanford CS 230 - Deep learning (Autumn 2019). Our goal is to apply [boltzmann generators](https://arxiv.org/abs/1812.01729) to new molecular systems. A description of our progress on this project can be found in [our project writeup](https://github.com/jbinagia/CS-230-Final-Project/blob/master/CS_230_Final_Report.pdf).
 
 ## Installation and Usage
 To view our analysis, one can perform the following steps. 
@@ -9,5 +9,4 @@ virtualenv -p python .env
 source .env/bin/activate 
 pip install -r requirements.txt
 ```
-- Note that for Windows, the virtual environment is activated by running the script `activate.bat` found in `\.env\Scripts\`
 - Open up one of the Jupyter notebooks located in the [notebooks](https://github.com/jbinagia/CS-230-Final-Project/tree/master/notebooks) folder. 
