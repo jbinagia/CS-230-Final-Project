@@ -9,4 +9,10 @@ virtualenv -p python .env
 source .env/bin/activate 
 pip install -r requirements.txt
 ```
-- Open up one of the Jupyter notebooks located in the [notebooks](https://github.com/jbinagia/CS-230-Final-Project/tree/master/notebooks) folder. 
+- If using Anaconda, the commands are: 
+```shell
+conda create -n .env pip
+conda activate .conda-env
+pip install -r requirements.txt
+```
+- Then open up one of the Jupyter notebooks located in the [notebooks](https://github.com/jbinagia/CS-230-Final-Project/tree/master/notebooks) folder, such as `double_well.ipynb' or 'analytical_example.ipynb'
