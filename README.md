@@ -1,5 +1,5 @@
 # Efficient Sampling of Equilibrium States Using Boltzmann Generators (CS 230 Final Project) 
-Final project for Stanford CS 230 - Deep learning (Autumn 2019). Our goal is to apply [boltzmann generators](https://arxiv.org/abs/1812.01729) to new molecular systems. A description of our progress on this project can be found in [our project writeup](https://github.com/jbinagia/CS-230-Final-Project/blob/master/CS_230_Final_Report.pdf).
+Final project for Stanford CS 230 - Deep learning (Autumn 2019). Our goal is to apply [boltzmann generators](https://arxiv.org/abs/1812.01729) to new molecular systems. A description of our work can be found in [our project writeup](https://github.com/jbinagia/CS-230-Final-Project/blob/master/CS_230_Final_Report.pdf).
 
 ## Installation and Usage
 To view our analysis, one can perform the following steps. 
